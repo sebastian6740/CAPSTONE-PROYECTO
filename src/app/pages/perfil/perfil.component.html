@@ -1,0 +1,235 @@
+
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Mi Perfil</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Tarjeta de perfil -->
+  <div class="perfil-card" *ngIf="usuario">
+    <!-- Foto de perfil -->
+    <div class="foto-container">
+      <img 
+        [src]="usuario.foto || 'https://via.placeholder.com/150?text=' + usuario.nombre" 
+        alt="Foto de perfil"
+        class="foto-perfil">
+      <button 
+        class="btn-cambiar-foto" 
+        (click)="cambiarFoto()"
+        [disabled]="!puedeActualizarFoto">
+        <ion-icon name="camera"></ion-icon>
+      </button>
+      <span *ngIf="!puedeActualizarFoto" class="dias-falta">
+        {{ diasParaFoto }}d
+      </span>
+    </div>
+
+    <!-- Nombre y calificación -->
+    <h2 class="perfil-nombre">{{ usuario.nombre }}</h2>
+    
+    <div class="rating">
+      <ion-icon 
+        *ngFor="let star of obtenerEstrellas()" 
+        name="star"
+        class="star-filled">
+      </ion-icon>
+      <ion-icon 
+        *ngFor="let i of [1,2,3,4,5].slice(obtenerEstrellas().length)" 
+        name="star-outline"
+        class="star-empty">
+      </ion-icon>
+      <span class="rating-value">({{ usuario.calificacion }})</span>
+    </div>
+
+    <!-- Insignias -->
+    <div class="insignias-container" *ngIf="obtenerInsigniasUsuario().length > 0">
+      <div class="insignia" *ngFor="let insignia of obtenerInsigniasUsuario()">
+        <span class="insignia-emoji">{{ insignia.emoji }}</span>
+        <span class="insignia-nombre">{{ insignia.nombre }}</span>
+      </div>
+    </div>
+
+    <!-- Botón editar -->
+    <ion-button 
+      expand="block" 
+      fill="outline"
+      (click)="toggleEdicion()"
+      class="btn-editar">
+      <ion-icon name="create" slot="start"></ion-icon>
+      {{ editandoPerfil ? 'Cancelar' : 'Editar perfil' }}
+    </ion-button>
+  </div>
+
+  <!-- Formulario de edición -->
+  <div *ngIf="editandoPerfil && usuario" class="edicion-form">
+    <form [formGroup]="formularioEdicion">
+      <ion-item>
+        <ion-label position="floating">Nombre completo</ion-label>
+        <ion-input 
+          type="text" 
+          formControlName="nombre">
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Teléfono</ion-label>
+        <ion-input 
+          type="tel" 
+          formControlName="telefono">
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Ciudad</ion-label>
+        <ion-input 
+          type="text" 
+          formControlName="ciudad">
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Biografía</ion-label>
+        <ion-textarea 
+          formControlName="biografia"
+          placeholder="Cuéntanos sobre ti (máx 200 caracteres)">
+        </ion-textarea>
+      </ion-item>
+
+      <ion-button 
+        expand="block" 
+        color="success"
+        (click)="guardarCambios()"
+        [disabled]="cargando || formularioEdicion.invalid">
+        <ion-spinner *ngIf="cargando" name="crescent"></ion-spinner>
+        {{ cargando ? 'Guardando...' : 'Guardar cambios' }}
+      </ion-button>
+    </form>
+  </div>
+
+  <!-- Estadísticas -->
+  <div class="estadisticas">
+    <div class="estadistica-card">
+      <div class="estadistica-numero">{{ usuario?.trueques_realizados }}</div>
+      <div class="estadistica-label">Trueques realizados</div>
+    </div>
+
+    <div class="estadistica-card">
+      <div class="estadistica-numero">{{ usuario?.trueques_pendientes }}</div>
+      <div class="estadistica-label">Pendientes</div>
+    </div>
+
+    <div class="estadistica-card">
+      <div class="estadistica-numero">{{ usuario?.recompensas }}</div>
+      <div class="estadistica-label">Recompensas</div>
+    </div>
+  </div>
+
+  <!-- Información personal -->
+  <ion-card class="info-card">
+    <ion-card-header>
+      <ion-card-title>Información personal</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="info-row">
+        <span class="info-label">Email:</span>
+        <span class="info-valor">{{ usuario?.email }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Teléfono:</span>
+        <span class="info-valor">{{ usuario?.telefono }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Ciudad:</span>
+        <span class="info-valor">{{ usuario?.ciudad }}</span>
+      </div>
+      <div class="info-row" *ngIf="usuario?.biografia">
+        <span class="info-label">Biografía:</span>
+        <span class="info-valor">{{ usuario?.biografia }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Miembro desde:</span>
+        <span class="info-valor">{{ usuario?.fechaRegistro | date: 'dd/MM/yyyy' }}</span>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Recompensas -->
+  <ion-card class="recompensas-card">
+    <ion-card-header>
+      <ion-card-title>🎁 Mis Recompensas</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="recompensas-info">
+        <div class="recompensa-item">
+          <span class="recompensa-icono">⭐</span>
+          <div>
+            <div class="recompensa-titulo">Puntos de bonificación</div>
+            <div class="recompensa-descripcion">Obtén 1 punto por cada trueque completado</div>
+          </div>
+          <span class="recompensa-valor">{{ usuario?.recompensas }}</span>
+        </div>
+
+        <div class="recompensa-item">
+          <span class="recompensa-icono">🏅</span>
+          <div>
+            <div class="recompensa-titulo">Nivel de usuario</div>
+            <div class="recompensa-descripcion">{{ (usuario?.calificacion || 0) >= 4.5 ? 'Premium' : (usuario?.calificacion || 0) >= 3 ? 'Estándar' : 'Básico' }}</div>
+          </div>
+        </div>
+
+        <div class="recompensa-item">
+          <span class="recompensa-icono">🎟️</span>
+          <div>
+            <div class="recompensa-titulo">Vouchers disponibles</div>
+            <div class="recompensa-descripcion">Usa tus puntos para obtener descuentos</div>
+          </div>
+          <span class="recompensa-valor">{{ Math.floor((usuario?.recompensas || 0) / 10) }}</span>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Sección de ayuda -->
+  <ion-card class="ayuda-card">
+    <ion-card-header>
+      <ion-card-title>Ayuda y configuración</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <button 
+        class="menu-button" 
+        (click)="irATrueques()">
+        <ion-icon name="list"></ion-icon>
+        <span>Mis trueques</span>
+        <ion-icon name="chevron-forward" slot="end"></ion-icon>
+      </button>
+
+      <button 
+        class="menu-button"
+        (click)="reportarProblema()">
+        <ion-icon name="alert-circle"></ion-icon>
+        <span>Reportar problema</span>
+        <ion-icon name="chevron-forward" slot="end"></ion-icon>
+      </button>
+
+      <button 
+        class="menu-button"
+        routerLink="/terminos">
+        <ion-icon name="document-text"></ion-icon>
+        <span>Términos y condiciones</span>
+        <ion-icon name="chevron-forward" slot="end"></ion-icon>
+      </button>
+
+      <button 
+        class="menu-button logout"
+        (click)="logout()">
+        <ion-icon name="log-out"></ion-icon>
+        <span>Cerrar sesión</span>
+        <ion-icon name="chevron-forward" slot="end"></ion-icon>
+      </button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

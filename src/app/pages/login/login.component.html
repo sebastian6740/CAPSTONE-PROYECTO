@@ -1,0 +1,56 @@
+<ion-content class="login-content">
+
+  <!-- Encabezado -->
+  <div class="logo-container">
+    <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
+    <h1>Trueque App</h1>
+  </div>
+
+  <p class="login-subtitle">Intercambia lo que no uses</p>
+
+  <!-- Formulario -->
+  <form [formGroup]="formularioLogin" (ngSubmit)="login()" class="login-form">
+    <ion-label position="floating">Email</ion-label>
+    
+    <ion-item class="login-item">
+      <ion-input 
+        type="email" 
+        formControlName="email"
+        placeholder="tu@correo.com">
+      </ion-input>
+    </ion-item>
+
+
+    <ion-label position="floating" >Contraseña</ion-label>
+    <ion-item class="login-item">
+      <ion-input 
+        [type]="mostrarContrasena ? 'text' : 'password'" 
+        formControlName="contrasena"
+        placeholder="********">
+      </ion-input>
+      <ion-icon 
+        slot="end" 
+        [name]="mostrarContrasena ? 'eye' : 'eye-off'"
+        (click)="toggleContrasena()">
+      </ion-icon>
+    </ion-item>
+
+    <ion-button 
+      expand="block" 
+      type="submit"
+      [disabled]="cargando || formularioLogin.invalid"
+      class="login-btn ion-margin-top ion-margin-bottom">
+      <ion-spinner *ngIf="cargando" name="crescent"></ion-spinner>
+      {{ cargando ? 'Iniciando...' : 'Iniciar Sesión' }}
+    </ion-button>
+  </form>
+
+  <div class="registro-link">
+    <p>¿No tienes cuenta? 
+      <ion-text (click)="irAlRegistro()">
+        Regístrate aquí
+      </ion-text>
+    </p>
+  </div>
+
+</ion-content>

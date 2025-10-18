@@ -1,0 +1,143 @@
+<ion-content class="login-content">
+  <!-- Logo y título -->
+  <div class="logo-container">
+    <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
+    <h1>Trueque App</h1>
+  </div>
+
+  <p class="login-subtitle">Crea tu cuenta y comienza a intercambiar</p>
+
+  <!-- Formulario -->
+  <form [formGroup]="formularioRegistro" (ngSubmit)="registrarse()" class="login-form">
+    
+    <!-- Nombre -->
+    <div class="input-wrapper">
+      <ion-label>Nombre completo</ion-label>
+      <ion-item class="login-item" lines="none">
+        <ion-input 
+          type="text" 
+          formControlName="nombre"
+          placeholder="Ej: Juan Pérez">
+        </ion-input>
+      </ion-item>
+      <div class="error-message" *ngIf="formularioRegistro.get('nombre')?.invalid && formularioRegistro.get('nombre')?.touched">
+        {{ obtenerErrorNombre() }}
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="input-wrapper">
+      <ion-label>Email</ion-label>
+      <ion-item class="login-item" lines="none">
+        <ion-input 
+          type="email" 
+          formControlName="email"
+          placeholder="ejemplo@correo.com">
+        </ion-input>
+      </ion-item>
+      <div class="error-message" *ngIf="formularioRegistro.get('email')?.invalid && formularioRegistro.get('email')?.touched">
+        {{ obtenerErrorEmail() }}
+      </div>
+    </div>
+
+    <!-- Teléfono -->
+    <div class="input-wrapper">
+      <ion-label>Teléfono</ion-label>
+      <ion-item class="login-item" lines="none">
+        <ion-input 
+          type="tel" 
+          formControlName="telefono"
+          placeholder="Ej: +56912345678">
+        </ion-input>
+      </ion-item>
+      <div class="error-message" *ngIf="formularioRegistro.get('telefono')?.invalid && formularioRegistro.get('telefono')?.touched">
+        {{ obtenerErrorTelefono() }}
+      </div>
+    </div>
+
+    <!-- Ciudad -->
+    <div class="input-wrapper">
+      <ion-label>Ciudad</ion-label>
+      <ion-item class="login-item" lines="none">
+        <ion-input 
+          type="text" 
+          formControlName="ciudad"
+          placeholder="Ej: Santiago">
+        </ion-input>
+      </ion-item>
+    </div>
+
+    <!-- Contraseña -->
+    <div class="input-wrapper">
+      <ion-label>Contraseña</ion-label>
+      <ion-item class="login-item" lines="none">
+        <ion-input 
+          [type]="mostrarContrasena ? 'text' : 'password'" 
+          formControlName="contrasena"
+          placeholder="Mínimo 6 caracteres">
+        </ion-input>
+        <ion-icon 
+          slot="end" 
+          [name]="mostrarContrasena ? 'eye' : 'eye-off'"
+          (click)="toggleContrasena()"
+          class="toggle-password-icon">
+        </ion-icon>
+      </ion-item>
+      <div class="error-message" *ngIf="formularioRegistro.get('contrasena')?.invalid && formularioRegistro.get('contrasena')?.touched">
+        {{ obtenerErrorContrasena() }}
+      </div>
+    </div>
+
+    <!-- Confirmar Contraseña -->
+    <div class="input-wrapper">
+      <ion-label>Confirmar Contraseña</ion-label>
+      <ion-item class="login-item" lines="none">
+        <ion-input 
+          [type]="mostrarConfirmarContrasena ? 'text' : 'password'" 
+          formControlName="confirmarContrasena"
+          placeholder="Repite tu contraseña">
+        </ion-input>
+        <ion-icon 
+          slot="end" 
+          [name]="mostrarConfirmarContrasena ? 'eye' : 'eye-off'"
+          (click)="toggleConfirmarContrasena()"
+          class="toggle-password-icon">
+        </ion-icon>
+      </ion-item>
+      <div class="error-message" *ngIf="formularioRegistro.get('confirmarContrasena')?.invalid && formularioRegistro.get('confirmarContrasena')?.touched">
+        Las contraseñas no coinciden
+      </div>
+    </div>
+
+    <!-- Términos y condiciones -->
+    <div class="input-wrapper">
+      <ion-item lines="none" class="login-item terminos-item">
+        <ion-checkbox slot="start" formControlName="terminos"></ion-checkbox>
+        <ion-label>Acepto términos y condiciones</ion-label>
+      </ion-item>
+      <div class="error-message" *ngIf="formularioRegistro.get('terminos')?.invalid && formularioRegistro.get('terminos')?.touched">
+        Debes aceptar los términos y condiciones
+      </div>
+    </div>
+
+    <!-- Botón Registrar -->
+    <ion-button 
+      expand="block" 
+      type="submit"
+      [disabled]="cargando || formularioRegistro.invalid"
+      class="login-btn">
+      <ion-spinner *ngIf="cargando" name="crescent"></ion-spinner>
+      {{ cargando ? 'Registrando...' : 'Crear Cuenta' }}
+    </ion-button>
+
+    <!-- Link al Login -->
+    <div class="registro-link">
+      <p>¿Ya tienes cuenta? 
+        <ion-text  (click)="irAlLogin()">
+    
+          Inicia sesión aquí
+        </ion-text>
+      </p>
+    </div>
+  </form>
+</ion-content>

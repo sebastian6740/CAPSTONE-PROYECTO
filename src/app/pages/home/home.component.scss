@@ -1,0 +1,213 @@
+ion-content {
+  --background: #f5f5f5;
+}
+
+.header-content {
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  color: white;
+  display: flex;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  justify-content: center;
+  
+}
+
+.header-title p {
+  margin: 0;
+  font-size: 15px;
+  color: #666;
+  text-align: center;
+}
+
+.search-bar {
+  margin-top: 8px;
+}
+
+ion-searchbar {
+  --background: #ffffff;
+  --border-radius: 20px;
+  --box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.filters {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  margin-top: auto;
+  padding: 10px;
+}
+
+/* 🔹 Estilo de botones de filtro */
+.filters ion-button {
+  flex: 1;
+  --background: #f0f0f0;
+  --color: #333;
+  --border-radius: 16px;
+  --box-shadow: none;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 14px;
+  text-transform: none;
+  font-weight: 500;
+}
+
+/* 🔹 Estilo de botón activo */
+.filters ion-button.activated,
+.filters ion-button.active {
+  --background: #007bff;
+  --color: #fff;
+  border-color: #007bff;
+}
+
+ion-button {
+  --border-radius: 16px;
+  --color: #222;
+  text-transform: none;
+  font-size: 14px;
+}
+
+.seccion-titulo {
+  font-weight: 700;
+  margin: 20px 0 10px 14px;
+  color: #111;
+  font-size: 20px;
+}
+
+.trueques-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 10px;
+}
+
+.trueque-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease;
+}
+
+.trueque-card:hover {
+  transform: translateY(-4px);
+}
+
+/* 🔹 Aquí agrandamos los emojis */
+.trueque-imagen {
+  font-size: 40px; /* antes era muy chico */
+  text-align: center;
+  margin: 10px 0;
+}
+
+.trueque-contenido {
+  text-align: center;
+}
+
+.trueque-nombre {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 4px 0;
+  color: #111;
+}
+
+.trueque-cambio {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.trueque-ubicacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #888;
+  font-size: 13px;
+}
+
+ion-button {
+  margin-top: 10px;
+  font-weight: 500;
+  --border-radius: 20px;
+  --box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* 🔹 Sección inferior */
+.buscar-ideal {
+  text-align: center;
+  margin: 30px 10px;
+}
+
+.buscar-ideal h3 {
+  font-weight: 600;
+  color: #222;
+}
+
+.buscar-ideal p {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background: #000; /* Fondo negro como en tu imagen */
+  padding: 10px 0 20px 0; /* 🔹 Aumenta el padding inferior si la quieres más separada */
+  border-top: 1px solid #333;
+  z-index: 10;
+}
+
+
+.nav-button {
+  background: 20px;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  color: #888;
+  font-size: 13px;
+}
+
+.nav-button.active {
+  color: #007bff;
+}
+.nav-button ion-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+} 
+
+.logo-container {
+  text-align: center; /* Centrar el contenido */
+  justify-content: center;
+}
+
+.logo-img {
+  width: 100px; /* Ajusta el tamaño del logo */
+  height: auto; /* Mantén la proporción de la imagen */
+  margin-top: 10px; /* Espaciado superior */
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  margin: 0 auto; /* Centrar horizontalmente */
+}
