@@ -1,0 +1,93 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Publicar Artículo</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="formulario-container">
+
+    <!-- Sección de título -->
+    <div class="seccion-titulo">
+      <h2>¿Qué quieres publicar?</h2>
+      <p>Completa la información de tu artículo</p>
+    </div>
+
+    <!-- Campo: Nombre del artículo -->
+    <div class="form-group">
+      <ion-label position="stacked">Nombre del artículo *</ion-label>
+      <ion-input
+        [(ngModel)]="articulo.nombre"
+        (ionChange)="guardarEnStorage()"
+        placeholder="Ej: PlayStation 4 con juegos"
+        class="custom-input"
+      ></ion-input>
+    </div>
+
+    <!-- Campo: Descripción -->
+    <div class="form-group">
+      <ion-label position="stacked">Descripción *</ion-label>
+      <ion-textarea
+        [(ngModel)]="articulo.descripcion"
+        (ionChange)="guardarEnStorage()"
+        placeholder="Describe tu artículo y qué te gustaría recibir a cambio..."
+        rows="5"
+        class="custom-textarea"
+      ></ion-textarea>
+    </div>
+
+    <!-- Campo: Categoría -->
+    <div class="form-group">
+      <ion-label position="stacked">Categoría *</ion-label>
+      <div class="categorias-grid">
+        <div
+          *ngFor="let cat of categorias"
+          class="categoria-item"
+          [class.selected]="articulo.categoria === cat.id"
+          (click)="seleccionarCategoria(cat.id)"
+        >
+          <span class="categoria-emoji">{{ cat.emoji }}</span>
+          <span class="categoria-nombre">{{ cat.nombre }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campo: Fotos -->
+    <div class="form-group">
+      <ion-label position="stacked">Fotos del artículo</ion-label>
+      <div class="fotos-container">
+        <!-- Previsualización de fotos seleccionadas -->
+        <div *ngFor="let foto of articulo.fotos; let i = index" class="foto-preview">
+          <img [src]="foto" alt="Foto del artículo">
+          <button class="btn-eliminar-foto" (click)="eliminarFoto(i)">
+            <ion-icon name="close-circle"></ion-icon>
+          </button>
+        </div>
+
+        <!-- Botón para agregar fotos (solo si hay menos de 5) -->
+        <div *ngIf="articulo.fotos.length < 5" class="foto-placeholder" (click)="seleccionarFotos()">
+          <ion-icon name="camera-outline" class="camera-icon"></ion-icon>
+          <span>Agregar fotos</span>
+        </div>
+      </div>
+      <p class="foto-info">Puedes agregar hasta 5 fotos ({{ articulo.fotos.length }}/5)</p>
+    </div>
+
+    <!-- Botón de publicar -->
+    <ion-button
+      expand="block"
+      color="primary"
+      size="large"
+      class="btn-publicar"
+      (click)="publicarArticulo()"
+    >
+      Publicar Artículo
+    </ion-button>
+
+  </div>
+</ion-content>

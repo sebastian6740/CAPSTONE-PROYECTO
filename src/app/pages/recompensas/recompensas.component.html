@@ -1,0 +1,132 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Recompensas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Banner de Puntos -->
+  <div class="puntos-banner">
+    <div class="puntos-icono-grande">💎</div>
+    <div class="puntos-detalle">
+      <p class="puntos-label">Mis Puntos</p>
+      <h2 class="puntos-cantidad">{{ puntosActuales }}</h2>
+    </div>
+  </div>
+
+  <!-- Segmentos -->
+  <ion-segment [value]="segmentoActual" (ionChange)="cambiarSegmento($event)" class="segment-custom">
+    <ion-segment-button value="catalogo">
+      <ion-label>Catálogo</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="mis-vouchers">
+      <ion-label>Mis Vouchers</ion-label>
+      <ion-badge *ngIf="vouchersActivos.length > 0" color="primary">{{ vouchersActivos.length }}</ion-badge>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Catálogo de Vouchers -->
+  <div *ngIf="segmentoActual === 'catalogo'" class="vouchers-container">
+    <div class="section-title">
+      <ion-icon name="gift-outline"></ion-icon>
+      <h3>Recompensas Disponibles</h3>
+    </div>
+
+    <div class="vouchers-grid">
+      <div *ngFor="let voucher of vouchersDisponibles" class="voucher-card" [style.--voucher-color]="voucher.color">
+        <div class="voucher-header">
+          <span class="voucher-emoji">{{ voucher.emoji }}</span>
+          <div class="voucher-badge" [class.affordable]="puedesCanjear(voucher)">
+            {{ voucher.puntosNecesarios }} pts
+          </div>
+        </div>
+
+        <div class="voucher-body">
+          <h4 class="voucher-nombre">{{ voucher.nombre }}</h4>
+          <p class="voucher-descripcion">{{ voucher.descripcion }}</p>
+
+          <div *ngIf="voucher.duracionDias" class="voucher-duracion">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>Válido por {{ voucher.duracionDias }} días</span>
+          </div>
+        </div>
+
+        <div class="voucher-footer">
+          <ion-button
+            expand="block"
+            [disabled]="!puedesCanjear(voucher)"
+            (click)="canjearVoucher(voucher)"
+            [color]="puedesCanjear(voucher) ? 'primary' : 'medium'">
+            <ion-icon name="swap-horizontal" slot="start"></ion-icon>
+            {{ puedesCanjear(voucher) ? 'Canjear' : 'Puntos insuficientes' }}
+          </ion-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje si no hay vouchers -->
+    <div *ngIf="vouchersDisponibles.length === 0" class="empty-state">
+      <ion-icon name="gift-outline"></ion-icon>
+      <p>No hay recompensas disponibles en este momento</p>
+    </div>
+  </div>
+
+  <!-- Mis Vouchers Canjeados -->
+  <div *ngIf="segmentoActual === 'mis-vouchers'" class="vouchers-container">
+    <div class="section-title">
+      <ion-icon name="ticket-outline"></ion-icon>
+      <h3>Mis Vouchers</h3>
+    </div>
+
+    <div class="mis-vouchers-list">
+      <div *ngFor="let voucherCanjeado of vouchersActivos" class="voucher-canjeado-card">
+        <div class="voucher-canjeado-header">
+          <span class="voucher-emoji-lg">{{ voucherCanjeado.voucher.emoji }}</span>
+          <div class="voucher-canjeado-info">
+            <h4 class="voucher-canjeado-nombre">{{ voucherCanjeado.voucher.nombre }}</h4>
+            <p class="voucher-codigo">Código: <strong>{{ voucherCanjeado.codigo }}</strong></p>
+          </div>
+        </div>
+
+        <div class="voucher-canjeado-body">
+          <p class="voucher-descripcion-sm">{{ voucherCanjeado.voucher.descripcion }}</p>
+
+          <div class="voucher-meta">
+            <div class="meta-item">
+              <ion-icon name="calendar-outline"></ion-icon>
+              <span class="meta-label">Canjeado:</span>
+              <span class="meta-value">{{ formatearFecha(voucherCanjeado.fechaCanje) }}</span>
+            </div>
+
+            <div class="meta-item" [class.expirado]="estaExpirado(voucherCanjeado)">
+              <ion-icon name="time-outline"></ion-icon>
+              <span class="meta-label">Estado:</span>
+              <span class="meta-value">{{ obtenerTextoExpiracion(voucherCanjeado) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="voucher-canjeado-footer">
+          <ion-badge [color]="voucherCanjeado.usado ? 'medium' : 'success'">
+            {{ voucherCanjeado.usado ? 'Usado' : 'Disponible' }}
+          </ion-badge>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje si no hay vouchers -->
+    <div *ngIf="vouchersActivos.length === 0" class="empty-state">
+      <ion-icon name="ticket-outline"></ion-icon>
+      <p>No tienes vouchers activos</p>
+      <ion-button fill="outline" (click)="segmentoActual = 'catalogo'">
+        Ver Catálogo
+      </ion-button>
+    </div>
+  </div>
+
+</ion-content>

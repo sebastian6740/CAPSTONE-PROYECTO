@@ -1,0 +1,223 @@
+// Header
+::ng-deep {
+  ion-header ion-toolbar[color="primary"] {
+    ion-back-button {
+      --color: white;
+      --icon-font-size: 24px;
+      color: white !important;
+    }
+
+    ion-button {
+      --color: white;
+      color: white !important;
+
+      ion-icon {
+        color: white !important;
+        font-size: 24px;
+      }
+    }
+
+    ion-title {
+      color: white !important;
+      font-weight: 600;
+    }
+  }
+}
+
+ion-content {
+  --background: #f5f7fa;
+}
+
+// Estado vacío
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  min-height: 60vh;
+
+  ion-icon {
+    font-size: 100px;
+    color: #ddd;
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #666;
+    margin: 0 0 10px 0;
+  }
+
+  p {
+    font-size: 14px;
+    color: #999;
+    margin: 0 0 30px 0;
+    max-width: 300px;
+  }
+
+  ion-button {
+    max-width: 280px;
+    width: 100%;
+    height: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    --border-radius: 12px;
+    --box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+    ion-icon {
+      font-size: 22px;
+      margin-right: 4px;
+      color: white;
+    }
+  }
+}
+
+// Lista de art�culos
+.articulos-list {
+  padding: 16px;
+}
+
+.articulo-card {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .articulo-imagen {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: #f0f0f0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .no-image {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+      ion-icon {
+        font-size: 60px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+    }
+
+    // Indicador de disponibilidad
+    .estado-indicator {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+      .circulo {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      &.disponible {
+        background: rgba(16, 185, 129, 0.9);
+        color: white;
+
+        .circulo {
+          background: white;
+          box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+      }
+
+      &.permutado {
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+
+        .circulo {
+          background: white;
+        }
+      }
+    }
+  }
+
+  .articulo-info {
+    padding: 16px;
+
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin: 0 0 8px 0;
+    }
+
+    .categoria-badge {
+      margin-bottom: 12px;
+      font-size: 11px;
+      padding: 4px 10px;
+      text-transform: capitalize;
+    }
+
+    .descripcion {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin: 0 0 12px 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .fecha {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #999;
+
+      ion-icon {
+        font-size: 16px;
+      }
+    }
+  }
+
+  .articulo-acciones {
+    padding: 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    ion-button {
+      --border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}

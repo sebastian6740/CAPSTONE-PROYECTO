@@ -1,0 +1,221 @@
+ion-content {
+  --background: #e5ddd5;
+  --padding-bottom: 0;
+  --padding-top: 0;
+}
+
+// Header con usuario
+.header-usuario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+
+  .header-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .header-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+      font-size: 20px;
+      color: white;
+    }
+  }
+
+  ion-title {
+    padding: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+// Toolbar de artículo
+.articulo-header {
+  --background: #dcf8c6;
+  --min-height: 40px;
+
+  .articulo-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #075e54;
+
+    ion-icon {
+      font-size: 16px;
+    }
+
+    span {
+      font-weight: 500;
+    }
+  }
+}
+
+// Contenedor de mensajes
+.mensajes-container {
+  padding: 16px;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+// Separador de fecha
+.fecha-separador {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0 12px 0;
+
+  span {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Wrapper de mensaje
+.mensaje-wrapper {
+  display: flex;
+  margin-bottom: 8px;
+
+  &.mensaje-mio {
+    justify-content: flex-end;
+  }
+}
+
+// Burbujas de mensaje
+.mensaje-bubble {
+  max-width: 75%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+
+  &.bubble-otro {
+    background: white;
+    border-bottom-left-radius: 2px;
+  }
+
+  &.bubble-mio {
+    background: #dcf8c6;
+    border-bottom-right-radius: 2px;
+  }
+
+  .mensaje-contenido {
+    margin: 0 0 4px 0;
+    color: #2c3e50;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+
+  .mensaje-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 2px;
+
+    .mensaje-hora {
+      font-size: 11px;
+      color: #667;
+    }
+
+    ion-icon {
+      font-size: 14px;
+      color: #999;
+
+      &.leido {
+        color: #4fc3f7;
+      }
+    }
+  }
+}
+
+// Estado vacío
+.empty-chat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  color: #999;
+
+  ion-icon {
+    font-size: 64px;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: 16px;
+    color: #999;
+    margin: 0;
+  }
+}
+
+// Footer de input
+ion-footer {
+  ion-toolbar {
+    --background: #f0f0f0;
+    --min-height: 56px;
+    --padding-start: 0;
+    --padding-end: 0;
+  }
+
+  .input-toolbar {
+    padding: 8px;
+  }
+
+  .input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border-radius: 24px;
+    padding: 4px 4px 4px 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .mensaje-input {
+      flex: 1;
+      --padding-start: 0;
+      --padding-end: 0;
+      --color: #2c3e50;
+      --placeholder-color: #999;
+      font-size: 15px;
+    }
+
+    .send-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      width: 40px;
+      height: 40px;
+
+      ion-icon {
+        font-size: 24px;
+        color: #3880ff;
+      }
+
+      &:disabled ion-icon {
+        color: #ccc;
+      }
+    }
+  }
+}

@@ -1,0 +1,337 @@
+// ============================================
+// PÁGINA DE RECOMPENSAS
+// ============================================
+
+ion-content {
+  --background: #f5f5f5;
+}
+
+// Banner de Puntos
+.puntos-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.puntos-icono-grande {
+  font-size: 64px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.puntos-detalle {
+  flex: 1;
+}
+
+.puntos-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.puntos-cantidad {
+  font-size: 48px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+// Segmentos
+.segment-custom {
+  margin: 16px;
+  --background: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  ion-segment-button {
+    --indicator-color: #667eea;
+    --color-checked: white;
+    --border-radius: 8px;
+    min-height: 40px;
+    font-weight: 600;
+    font-size: 14px;
+
+    ion-badge {
+      margin-left: 6px;
+    }
+  }
+}
+
+// Contenedor de vouchers
+.vouchers-container {
+  padding: 0 16px 80px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 16px;
+  padding: 0 4px;
+
+  ion-icon {
+    font-size: 24px;
+    color: #667eea;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+    font-family: 'Trebuchet MS', sans-serif;
+  }
+}
+
+// Grid de vouchers
+.vouchers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.voucher-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-top: 4px solid var(--voucher-color, #667eea);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.voucher-header {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.voucher-emoji {
+  font-size: 48px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.voucher-badge {
+  background: #e0e0e0;
+  color: #666;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.affordable {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+}
+
+.voucher-body {
+  padding: 20px;
+}
+
+.voucher-nombre {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+  font-family: 'Trebuchet MS', sans-serif;
+}
+
+.voucher-descripcion {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+}
+
+.voucher-descripcion-sm {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  margin: 0 0 16px 0;
+}
+
+.voucher-duracion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+  font-size: 13px;
+  margin-top: 12px;
+
+  ion-icon {
+    font-size: 16px;
+  }
+}
+
+.voucher-footer {
+  padding: 0 20px 20px;
+
+  ion-button {
+    --border-radius: 12px;
+    font-weight: 600;
+    text-transform: none;
+    --box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+}
+
+// Mis Vouchers Canjeados
+.mis-vouchers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.voucher-canjeado-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.voucher-canjeado-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.voucher-emoji-lg {
+  font-size: 56px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.voucher-canjeado-info {
+  flex: 1;
+}
+
+.voucher-canjeado-nombre {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 6px 0;
+  font-family: 'Trebuchet MS', sans-serif;
+}
+
+.voucher-codigo {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+
+  strong {
+    color: #667eea;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+  }
+}
+
+.voucher-canjeado-body {
+  padding: 20px;
+}
+
+.voucher-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+
+  ion-icon {
+    font-size: 18px;
+    color: #999;
+  }
+
+  &.expirado {
+    color: #ff6b6b;
+
+    ion-icon {
+      color: #ff6b6b;
+    }
+  }
+}
+
+.meta-label {
+  font-weight: 600;
+}
+
+.meta-value {
+  color: #333;
+}
+
+.voucher-canjeado-footer {
+  padding: 0 20px 20px;
+  display: flex;
+  justify-content: flex-end;
+
+  ion-badge {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+// Estado vacío
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+
+  ion-icon {
+    font-size: 80px;
+    color: #ccc;
+    margin-bottom: 20px;
+  }
+
+  p {
+    font-size: 16px;
+    color: #999;
+    margin: 0 0 20px 0;
+  }
+
+  ion-button {
+    --border-radius: 12px;
+    font-weight: 600;
+    text-transform: none;
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .vouchers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .puntos-icono-grande {
+    font-size: 48px;
+  }
+
+  .puntos-cantidad {
+    font-size: 40px;
+  }
+}

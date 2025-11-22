@@ -1,4 +1,12 @@
 <ion-content class="login-content">
+  <!-- Cubos animados de fondo -->
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+
   <!-- Logo y título -->
   <div class="logo-container">
     <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
@@ -6,14 +14,15 @@
   </div>
 
   <p class="login-subtitle">Crea tu cuenta y comienza a intercambiar</p>
-
+    <div class="container-formulario">
   <!-- Formulario -->
-  <form [formGroup]="formularioRegistro" (ngSubmit)="registrarse()" class="login-form">
-    
+  <form [formGroup]="formularioRegistro" (ngSubmit)="registrarse()" class="registro-form">
+
+  
     <!-- Nombre -->
-    <div class="input-wrapper">
-      <ion-label>Nombre completo</ion-label>
-      <ion-item class="login-item" lines="none">
+
+      <ion-label position="" class="ion-label">Nombre completo</ion-label>
+      <ion-item class="registro-item" lines="none">
         <ion-input 
           type="text" 
           formControlName="nombre"
@@ -23,11 +32,11 @@
       <div class="error-message" *ngIf="formularioRegistro.get('nombre')?.invalid && formularioRegistro.get('nombre')?.touched">
         {{ obtenerErrorNombre() }}
       </div>
-    </div>
+    
 
     <!-- Email -->
-    <div class="input-wrapper">
-      <ion-label>Email</ion-label>
+  
+      <ion-label position ="">Email</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
           type="email" 
@@ -38,11 +47,11 @@
       <div class="error-message" *ngIf="formularioRegistro.get('email')?.invalid && formularioRegistro.get('email')?.touched">
         {{ obtenerErrorEmail() }}
       </div>
-    </div>
+  
 
     <!-- Teléfono -->
-    <div class="input-wrapper">
-      <ion-label>Teléfono</ion-label>
+    
+      <ion-label position="">Teléfono</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
           type="tel" 
@@ -53,23 +62,40 @@
       <div class="error-message" *ngIf="formularioRegistro.get('telefono')?.invalid && formularioRegistro.get('telefono')?.touched">
         {{ obtenerErrorTelefono() }}
       </div>
-    </div>
+    
 
     <!-- Ciudad -->
-    <div class="input-wrapper">
-      <ion-label>Ciudad</ion-label>
+
+      <ion-label position="">Ciudad</ion-label>
       <ion-item class="login-item" lines="none">
-        <ion-input 
-          type="text" 
+        <ion-select
           formControlName="ciudad"
-          placeholder="Ej: Santiago">
-        </ion-input>
+          placeholder="Selecciona tu ciudad"
+          interface="action-sheet"
+          cancelText="Cancelar">
+          <ion-select-option value="Santiago">Santiago</ion-select-option>
+          <ion-select-option value="Valparaíso">Valparaíso</ion-select-option>
+          <ion-select-option value="Viña del Mar">Viña del Mar</ion-select-option>
+          <ion-select-option value="Concepción">Concepción</ion-select-option>
+          <ion-select-option value="La Serena">La Serena</ion-select-option>
+          <ion-select-option value="Antofagasta">Antofagasta</ion-select-option>
+          <ion-select-option value="Temuco">Temuco</ion-select-option>
+          <ion-select-option value="Rancagua">Rancagua</ion-select-option>
+          <ion-select-option value="Talca">Talca</ion-select-option>
+          <ion-select-option value="Arica">Arica</ion-select-option>
+          <ion-select-option value="Chillán">Chillán</ion-select-option>
+          <ion-select-option value="Iquique">Iquique</ion-select-option>
+          <ion-select-option value="Los Ángeles">Los Ángeles</ion-select-option>
+          <ion-select-option value="Puerto Montt">Puerto Montt</ion-select-option>
+          <ion-select-option value="Coyhaique">Coyhaique</ion-select-option>
+          <ion-select-option value="Punta Arenas">Punta Arenas</ion-select-option>
+        </ion-select>
       </ion-item>
-    </div>
+   
 
     <!-- Contraseña -->
-    <div class="input-wrapper">
-      <ion-label>Contraseña</ion-label>
+ 
+      <ion-label position="">Contraseña</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
           [type]="mostrarContrasena ? 'text' : 'password'" 
@@ -86,11 +112,11 @@
       <div class="error-message" *ngIf="formularioRegistro.get('contrasena')?.invalid && formularioRegistro.get('contrasena')?.touched">
         {{ obtenerErrorContrasena() }}
       </div>
-    </div>
+ 
 
     <!-- Confirmar Contraseña -->
-    <div class="input-wrapper">
-      <ion-label>Confirmar Contraseña</ion-label>
+   
+      <ion-label position="">Confirmar Contraseña</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
           [type]="mostrarConfirmarContrasena ? 'text' : 'password'" 
@@ -107,25 +133,25 @@
       <div class="error-message" *ngIf="formularioRegistro.get('confirmarContrasena')?.invalid && formularioRegistro.get('confirmarContrasena')?.touched">
         Las contraseñas no coinciden
       </div>
-    </div>
+   
 
     <!-- Términos y condiciones -->
-    <div class="input-wrapper">
-      <ion-item lines="none" class="login-item terminos-item">
+
+      <ion-item lines="none" class=" terminos-item">
         <ion-checkbox slot="start" formControlName="terminos"></ion-checkbox>
         <ion-label>Acepto términos y condiciones</ion-label>
       </ion-item>
       <div class="error-message" *ngIf="formularioRegistro.get('terminos')?.invalid && formularioRegistro.get('terminos')?.touched">
         Debes aceptar los términos y condiciones
       </div>
-    </div>
+ 
 
     <!-- Botón Registrar -->
     <ion-button 
       expand="block" 
       type="submit"
       [disabled]="cargando || formularioRegistro.invalid"
-      class="login-btn">
+      class="login-btn ion-margin-top ion-margin-bottom">
       <ion-spinner *ngIf="cargando" name="crescent"></ion-spinner>
       {{ cargando ? 'Registrando...' : 'Crear Cuenta' }}
     </ion-button>
@@ -140,4 +166,5 @@
       </p>
     </div>
   </form>
+  </div>
 </ion-content>

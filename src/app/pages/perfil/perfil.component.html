@@ -1,8 +1,9 @@
-
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/home"></ion-back-button>
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
     </ion-buttons>
     <ion-title>Mi Perfil</ion-title>
   </ion-toolbar>
@@ -12,20 +13,38 @@
   <!-- Tarjeta de perfil -->
   <div class="perfil-card" *ngIf="usuario">
     <!-- Foto de perfil -->
-    <div class="foto-container">
-      <img 
-        [src]="usuario.foto || 'https://via.placeholder.com/150?text=' + usuario.nombre" 
+    <div class="foto-container"
+         [class.editable]="editandoPerfil"
+         [class.pendiente]="hayFotoPendiente()"
+         (click)="editandoPerfil && cambiarFoto()">
+      <img
+        [src]="obtenerFotoUsuario()"
         alt="Foto de perfil"
-        class="foto-perfil">
-      <button 
-        class="btn-cambiar-foto" 
-        (click)="cambiarFoto()"
-        [disabled]="!puedeActualizarFoto">
+        class="foto-perfil"
+        (error)="$any($event.target).src = fotoDefault">
+
+      <!-- Overlay cuando está en modo edición -->
+      <div
+        *ngIf="editandoPerfil && !hayFotoPendiente()"
+        class="overlay-editar-foto">
         <ion-icon name="camera"></ion-icon>
-      </button>
-      <span *ngIf="!puedeActualizarFoto" class="dias-falta">
-        {{ diasParaFoto }}d
-      </span>
+        <span>{{ puedeActualizarFoto ? 'Cambiar foto' : 'Cambiar en ' + diasParaFoto + 'd' }}</span>
+      </div>
+
+      <!-- Overlay cuando la foto está pendiente de revisión -->
+      <div
+        *ngIf="hayFotoPendiente()"
+        class="overlay-pendiente">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>En revisión</span>
+      </div>
+
+      <!-- Badge cuando la foto fue rechazada -->
+      <div
+        *ngIf="fotoRechazada()"
+        class="badge-rechazada">
+        <ion-icon name="close-circle"></ion-icon>
+      </div>
     </div>
 
     <!-- Nombre y calificación -->
@@ -53,8 +72,41 @@
       </div>
     </div>
 
+    <!-- Sección de Puntos y Recompensas -->
+    <div class="puntos-section" *ngIf="estadisticasPuntos">
+      <div class="puntos-header">
+        <div class="puntos-icono">💎</div>
+        <div class="puntos-info">
+          <h3 class="puntos-titulo">Mis Puntos</h3>
+          <p class="puntos-saldo">{{ puntosActuales }} puntos</p>
+        </div>
+      </div>
+
+      <div class="puntos-stats">
+        <div class="stat-item">
+          <span class="stat-label">Ganados</span>
+          <span class="stat-value">+{{ estadisticasPuntos.puntosGanados }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Gastados</span>
+          <span class="stat-value">-{{ estadisticasPuntos.puntosGastados }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Vouchers</span>
+          <span class="stat-value">{{ estadisticasPuntos.voucherCanjeados }}</span>
+        </div>
+      </div>
+
+      <div class="puntos-acciones">
+        <ion-button expand="block" fill="solid" color="primary" (click)="irARecompensas()">
+          <ion-icon name="gift" slot="start"></ion-icon>
+          Ver Recompensas
+        </ion-button>
+      </div>
+    </div>
+
     <!-- Botón editar -->
-    <ion-button 
+    <ion-button
       expand="block" 
       fill="outline"
       (click)="toggleEdicion()"
@@ -157,37 +209,16 @@
     </ion-card-content>
   </ion-card>
 
-  <!-- Recompensas -->
+  <!-- Nivel de usuario -->
   <ion-card class="recompensas-card">
-    <ion-card-header>
-      <ion-card-title>🎁 Mis Recompensas</ion-card-title>
-    </ion-card-header>
     <ion-card-content>
       <div class="recompensas-info">
-        <div class="recompensa-item">
-          <span class="recompensa-icono">⭐</span>
-          <div>
-            <div class="recompensa-titulo">Puntos de bonificación</div>
-            <div class="recompensa-descripcion">Obtén 1 punto por cada trueque completado</div>
-          </div>
-          <span class="recompensa-valor">{{ usuario?.recompensas }}</span>
-        </div>
-
         <div class="recompensa-item">
           <span class="recompensa-icono">🏅</span>
           <div>
             <div class="recompensa-titulo">Nivel de usuario</div>
             <div class="recompensa-descripcion">{{ (usuario?.calificacion || 0) >= 4.5 ? 'Premium' : (usuario?.calificacion || 0) >= 3 ? 'Estándar' : 'Básico' }}</div>
           </div>
-        </div>
-
-        <div class="recompensa-item">
-          <span class="recompensa-icono">🎟️</span>
-          <div>
-            <div class="recompensa-titulo">Vouchers disponibles</div>
-            <div class="recompensa-descripcion">Usa tus puntos para obtener descuentos</div>
-          </div>
-          <span class="recompensa-valor">{{ Math.floor((usuario?.recompensas || 0) / 10) }}</span>
         </div>
       </div>
     </ion-card-content>
@@ -215,7 +246,8 @@
         <ion-icon name="chevron-forward" slot="end"></ion-icon>
       </button>
 
-      <button 
+ 
+      <button
         class="menu-button"
         routerLink="/terminos">
         <ion-icon name="document-text"></ion-icon>
@@ -223,7 +255,16 @@
         <ion-icon name="chevron-forward" slot="end"></ion-icon>
       </button>
 
-      <button 
+      <button
+        *ngIf="esAdmin"
+        class="menu-button admin-button"
+        (click)="irAPanelAdmin()">
+        <ion-icon name="shield-checkmark"></ion-icon>
+        <span>Panel de Administración</span>
+        <ion-badge color="danger">ADMIN</ion-badge>
+      </button>
+
+      <button
         class="menu-button logout"
         (click)="logout()">
         <ion-icon name="log-out"></ion-icon>

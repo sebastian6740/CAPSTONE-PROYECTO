@@ -1,0 +1,379 @@
+// Estilos generales
+ion-content {
+  --background: #f5f5f5;
+}
+
+// Secci�n de perfil
+.seccion-perfil {
+  padding: 16px;
+}
+
+.cabecera-usuario {
+  text-align: center;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  position: relative;
+
+  .foto-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 16px;
+
+    img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .icono-placeholder {
+      font-size: 120px;
+      color: white;
+    }
+
+    .badge-admin {
+      position: absolute;
+      top: 0;
+      right: -10px;
+      font-size: 10px;
+      padding: 4px 8px;
+    }
+
+    .icono-verificado {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      font-size: 32px;
+      color: #10b981;
+      background: white;
+      border-radius: 50%;
+    }
+  }
+
+  .nombre-usuario {
+    color: white;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+
+  .email-usuario {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    margin: 0 0 16px 0;
+  }
+
+  .nivel-calificacion {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+
+    ion-chip {
+      font-weight: 600;
+    }
+  }
+}
+
+// Estadísticas
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 16px 8px;
+    background: #f9fafb;
+    border-radius: 12px;
+
+    ion-icon {
+      font-size: 28px;
+    }
+
+    .stat-info {
+      width: 100%;
+
+      .stat-label {
+        font-size: 10px;
+        color: #6b7280;
+        margin: 0 0 6px 0;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        line-height: 1.2;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+      }
+    }
+  }
+
+  // Responsive para pantallas más grandes
+  @media (min-width: 480px) {
+    gap: 16px;
+
+    .stat-item {
+      flex-direction: row;
+      text-align: left;
+      padding: 12px;
+      gap: 12px;
+
+      ion-icon {
+        font-size: 32px;
+      }
+
+      .stat-info {
+        .stat-label {
+          font-size: 11px;
+        }
+
+        .stat-value {
+          font-size: 20px;
+        }
+      }
+    }
+  }
+}
+
+// Foto pendiente
+.foto-pendiente-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  .foto-pendiente {
+    width: 200px;
+    height: 200px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .acciones-foto {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+}
+
+// Secci�n de art�culos
+.seccion-articulos {
+  padding: 16px;
+
+  .vacio {
+    text-align: center;
+    padding: 48px 16px;
+    color: #9ca3af;
+
+    .icono-vacio {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    p {
+      font-size: 16px;
+    }
+  }
+
+  .card-articulo {
+    margin-bottom: 16px;
+
+    .articulo-header {
+      position: relative;
+      height: 200px;
+      overflow: hidden;
+
+      .articulo-foto {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .articulo-sin-foto {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e5e7eb;
+
+        ion-icon {
+          font-size: 64px;
+          color: #9ca3af;
+        }
+      }
+
+      .estado-indicator {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        backdrop-filter: blur(8px);
+
+        .circulo {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        &.disponible {
+          background: rgba(16, 185, 129, 0.9);
+          color: white;
+
+          .circulo {
+            background: white;
+          }
+        }
+
+        &.permutado {
+          background: rgba(239, 68, 68, 0.9);
+          color: white;
+
+          .circulo {
+            background: white;
+          }
+        }
+      }
+    }
+
+    .articulo-nombre {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      color: #1f2937;
+    }
+
+    .articulo-categoria {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #667eea;
+      margin: 0 0 12px 0;
+
+      ion-icon {
+        font-size: 16px;
+      }
+    }
+
+    .articulo-descripcion {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0 0 16px 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .acciones-articulo {
+      display: flex;
+      gap: 8px;
+    }
+  }
+}
+
+// Secci�n de acciones
+.seccion-acciones {
+  padding: 16px;
+
+  .item-peligro {
+    --background: #fef2f2;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+
+  .texto-deshabilitado {
+    color: #9ca3af !important;
+    font-style: italic;
+  }
+
+  .card-advertencia {
+    background: #fffbeb;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+
+    .contenido-advertencia {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+
+      ion-icon {
+        font-size: 32px;
+        flex-shrink: 0;
+        margin-top: 4px;
+      }
+
+      h4 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #92400e;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+        color: #78350f;
+        line-height: 1.5;
+      }
+    }
+  }
+}
+
+// Animaci�n de pulso
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+// Cards generales
+ion-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+
+  ion-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+}
+
+// Segment
+ion-segment {
+  padding: 8px;
+}
+
+ion-segment-button {
+  --indicator-color: #667eea;
+  font-size: 13px;
+}

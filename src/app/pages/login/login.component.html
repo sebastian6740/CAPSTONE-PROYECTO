@@ -1,4 +1,11 @@
 <ion-content class="login-content">
+  <!-- Cubos animados de fondo -->
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
 
   <!-- Encabezado -->
   <div class="logo-container">
@@ -8,9 +15,10 @@
 
   <p class="login-subtitle">Intercambia lo que no uses</p>
 
-  <!-- Formulario -->
+  <div class="container-formulario">
+ <!-- Formulario -->
   <form [formGroup]="formularioLogin" (ngSubmit)="login()" class="login-form">
-    <ion-label position="floating">Email</ion-label>
+    <ion-label position="">Email</ion-label>
     
     <ion-item class="login-item">
       <ion-input 
@@ -21,7 +29,7 @@
     </ion-item>
 
 
-    <ion-label position="floating" >Contraseña</ion-label>
+    <ion-label position="" >Contraseña</ion-label>
     <ion-item class="login-item">
       <ion-input 
         [type]="mostrarContrasena ? 'text' : 'password'" 
@@ -44,6 +52,8 @@
       {{ cargando ? 'Iniciando...' : 'Iniciar Sesión' }}
     </ion-button>
   </form>
+  </div>
+ 
 
   <div class="registro-link">
     <p>¿No tienes cuenta? 

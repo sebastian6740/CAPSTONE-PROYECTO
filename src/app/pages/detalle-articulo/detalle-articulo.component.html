@@ -1,0 +1,136 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Detalle del Artículo</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div *ngIf="articulo" class="detalle-container">
+
+    <!-- Slider de Imágenes -->
+    <div class="imagen-slider">
+      <swiper-container
+        *ngIf="articulo.fotos && articulo.fotos.length > 0"
+        loop="true"
+        pagination="true"
+        autoplay="true"
+        speed="400">
+        <swiper-slide *ngFor="let foto of articulo.fotos">
+          <img [src]="foto" alt="Foto del artículo" class="slide-image">
+        </swiper-slide>
+      </swiper-container>
+
+      <!-- Si no hay fotos, mostrar placeholder -->
+      <div *ngIf="!articulo.fotos || articulo.fotos.length === 0" class="no-image-placeholder">
+        <ion-icon name="image-outline"></ion-icon>
+        <p>Sin imágenes</p>
+      </div>
+    </div>
+
+    <!-- Información del Artículo -->
+    <div class="articulo-info">
+      <div class="articulo-header">
+        <h1 class="articulo-nombre">{{ articulo.nombre }}</h1>
+        <ion-badge color="primary" class="categoria-badge">
+          {{ articulo.categoria }}
+        </ion-badge>
+      </div>
+
+      <div class="articulo-descripcion">
+        <h3>Descripción</h3>
+        <p>{{ articulo.descripcion }}</p>
+      </div>
+
+      <div class="articulo-fecha">
+        <ion-icon name="calendar-outline"></ion-icon>
+        <span>Publicado el {{ articulo.fechaPublicacion | date:'dd/MM/yyyy' }}</span>
+      </div>
+    </div>
+
+    <!-- Información del Propietario -->
+    <div class="propietario-info" *ngIf="propietario">
+      <h3>Publicado por</h3>
+
+      <div class="propietario-card">
+        <div class="propietario-avatar">
+          <img *ngIf="propietario.foto" [src]="propietario.foto" alt="Foto de perfil">
+          <div *ngIf="!propietario.foto" class="avatar-placeholder">
+            <ion-icon name="person"></ion-icon>
+          </div>
+        </div>
+
+        <div class="propietario-datos">
+          <h4 class="propietario-nombre">
+            {{ propietario.nombre }}
+            <ion-badge *ngIf="propietario.verificado" color="success" class="verificado-badge">
+              <ion-icon name="checkmark-circle"></ion-icon>
+              Verificado
+            </ion-badge>
+          </h4>
+
+          <div class="propietario-stats">
+            <div class="stat-item">
+              <ion-icon name="swap-horizontal"></ion-icon>
+              <span>{{ propietario.trueques_realizados }} trueques</span>
+            </div>
+            <div class="stat-item">
+              <ion-icon name="star"></ion-icon>
+              <span>{{ propietario.calificacion }}/5</span>
+            </div>
+          </div>
+
+          <div class="propietario-ubicacion">
+            <ion-icon name="location"></ion-icon>
+            <span>{{ propietario.ciudad }}</span>
+          </div>
+
+          <p *ngIf="propietario.biografia" class="propietario-bio">
+            {{ propietario.biografia }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón Contactar (solo si no es mi artículo) -->
+    <div class="acciones-container" *ngIf="!esMiArticulo">
+      <ion-button
+        expand="block"
+        color="success"
+        size="large"
+        (click)="contactarPropietario()"
+        class="btn-contactar">
+        <ion-icon name="chatbubble-outline" slot="start"></ion-icon>
+        Contactar vendedor
+      </ion-button>
+      <p class="contactar-info">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        Pregunta si está disponible y coordina el intercambio
+      </p>
+    </div>
+
+    <!-- Mensaje si es mi artículo -->
+    <div class="mi-articulo-info" *ngIf="esMiArticulo">
+      <ion-card color="light">
+        <ion-card-content>
+          <div class="mi-articulo-mensaje">
+            <ion-icon name="information-circle" color="primary"></ion-icon>
+            <p>Este es tu artículo. Los demás usuarios pueden contactarte para preguntar sobre él.</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+  </div>
+
+  <!-- Estado de carga -->
+  <div *ngIf="!articulo" class="loading-state">
+    <ion-spinner></ion-spinner>
+    <p>Cargando...</p>
+  </div>
+
+</ion-content>

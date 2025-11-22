@@ -1,0 +1,264 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      <ion-icon name="shield-checkmark"></ion-icon>
+      Panel de Administración
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cerrarSesion()">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Bienvenida Admin -->
+  <div class="admin-header">
+    <div class="admin-badge">
+      <ion-icon name="shield-checkmark"></ion-icon>
+      <span>ADMIN</span>
+    </div>
+    <h2>Bienvenido, {{ usuarioAdmin?.nombre }}</h2>
+    <p>{{ usuarioAdmin?.email }}</p>
+  </div>
+
+  <!-- Estadísticas -->
+  <div class="estadisticas-grid">
+    <div class="stat-card">
+      <ion-icon name="people" class="stat-icon"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-number">{{ estadisticas.totalUsuarios }}</span>
+        <span class="stat-label">Usuarios Totales</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <ion-icon name="cube" class="stat-icon"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-number">{{ estadisticas.totalArticulos }}</span>
+        <span class="stat-label">Artículos</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <ion-icon name="today" class="stat-icon"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-number">{{ estadisticas.articulosHoy }}</span>
+        <span class="stat-label">Hoy</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <ion-icon name="person-add" class="stat-icon"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-number">{{ estadisticas.usuariosNuevos }}</span>
+        <span class="stat-label">Nuevos (7d)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs de navegación -->
+  <div class="tabs-container">
+    <ion-segment [value]="vistaActiva" (ionChange)="cambiarVista($event.detail.value)">
+      <ion-segment-button value="articulos">
+        <ion-icon name="cube"></ion-icon>
+        <ion-label>Artículos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="usuarios">
+        <ion-icon name="people"></ion-icon>
+        <ion-label>Usuarios</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="fotos">
+        <ion-icon name="camera"></ion-icon>
+        <ion-label>Fotos</ion-label>
+        <ion-badge *ngIf="fotosPendientes.length > 0" color="warning">{{ fotosPendientes.length }}</ion-badge>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Vista de Artículos -->
+  <div *ngIf="vistaActiva === 'articulos'" class="content-section">
+    <h3 class="section-title">Todos los Artículos ({{ articulos.length }})</h3>
+
+    <div *ngIf="articulos.length === 0" class="empty-state">
+      <ion-icon name="cube-outline"></ion-icon>
+      <p>No hay artículos publicados</p>
+    </div>
+
+    <div *ngFor="let articulo of articulos" class="admin-card">
+      <div class="card-header">
+        <div class="card-image">
+          <img *ngIf="articulo.fotos && articulo.fotos.length > 0" [src]="articulo.fotos[0]" alt="Foto">
+          <div *ngIf="!articulo.fotos || articulo.fotos.length === 0" class="no-image">
+            <ion-icon name="image-outline"></ion-icon>
+          </div>
+        </div>
+        <div class="card-info">
+          <h4>{{ articulo.nombre }}</h4>
+          <p class="usuario-info">
+            <ion-icon name="person"></ion-icon>
+            {{ obtenerNombreUsuario(articulo.usuarioId || '') }}
+          </p>
+          <p class="categoria-badge">{{ articulo.categoria }}</p>
+        </div>
+      </div>
+
+      <div class="card-description">
+        <p>{{ articulo.descripcion }}</p>
+      </div>
+
+      <div class="card-actions">
+        <ion-button fill="clear" size="small" color="danger" (click)="eliminarArticulo(articulo)">
+          <ion-icon name="trash" slot="start"></ion-icon>
+          Eliminar
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista de Usuarios -->
+  <div *ngIf="vistaActiva === 'usuarios'" class="content-section">
+    <h3 class="section-title">Todos los Usuarios ({{ usuarios.length }})</h3>
+
+    <div *ngFor="let usuario of usuarios" class="admin-card">
+      <div class="card-header">
+        <div class="card-image">
+          <img *ngIf="usuario.foto" [src]="usuario.foto" alt="Foto de perfil">
+          <div *ngIf="!usuario.foto" class="no-image">
+            <ion-icon name="person"></ion-icon>
+          </div>
+        </div>
+        <div class="card-info">
+          <h4>
+            {{ usuario.nombre }}
+            <ion-badge *ngIf="usuario.rol === 'admin'" color="danger">ADMIN</ion-badge>
+            <ion-badge *ngIf="usuario.verificado" color="success">
+              <ion-icon name="checkmark-circle"></ion-icon>
+            </ion-badge>
+          </h4>
+          <p>{{ usuario.email }}</p>
+          <p class="ciudad-info">
+            <ion-icon name="location"></ion-icon>
+            {{ usuario.ciudad }}
+          </p>
+        </div>
+      </div>
+
+      <div class="user-stats">
+        <div class="user-stat">
+          <ion-icon name="swap-horizontal"></ion-icon>
+          <span>{{ usuario.trueques_realizados }} trueques</span>
+        </div>
+        <div class="user-stat">
+          <ion-icon name="star"></ion-icon>
+          <span>{{ usuario.calificacion }}/5</span>
+        </div>
+        <div class="user-stat">
+          <ion-icon name="trophy"></ion-icon>
+          <span>{{ usuario.recompensas }} puntos</span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <ion-button fill="clear" size="small" (click)="verDetalleUsuario(usuario)">
+          <ion-icon name="eye" slot="start"></ion-icon>
+          Ver detalles
+        </ion-button>
+        <ion-button
+          fill="clear"
+          size="small"
+          color="danger"
+          (click)="eliminarUsuario(usuario)"
+          [disabled]="usuario.rol === 'admin'">
+          <ion-icon name="trash" slot="start"></ion-icon>
+          Eliminar
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista de Fotos Pendientes -->
+  <div *ngIf="vistaActiva === 'fotos'" class="content-section">
+    <h3 class="section-title">
+      Fotos Pendientes de Revisión
+      <ion-badge *ngIf="fotosPendientes.length > 0" color="warning">{{ fotosPendientes.length }}</ion-badge>
+    </h3>
+
+    <div *ngIf="fotosPendientes.length === 0" class="empty-state">
+      <ion-icon name="checkmark-done-circle"></ion-icon>
+      <p>¡Todo al día! No hay fotos pendientes de revisión</p>
+    </div>
+
+    <div *ngFor="let usuario of fotosPendientes" class="foto-review-card">
+      <div class="review-header">
+        <div class="user-info">
+          <h4>{{ usuario.nombre }}</h4>
+          <p>{{ usuario.email }}</p>
+          <p class="ciudad-info">
+            <ion-icon name="location"></ion-icon>
+            {{ usuario.ciudad }}
+          </p>
+        </div>
+        <ion-badge color="warning">
+          <ion-icon name="time-outline"></ion-icon>
+          PENDIENTE
+        </ion-badge>
+      </div>
+
+      <div class="foto-comparison">
+        <!-- Foto actual (si tiene) -->
+        <div class="foto-column">
+          <div class="foto-label">Foto Actual</div>
+          <div class="foto-wrapper">
+            <img *ngIf="usuario.foto" [src]="usuario.foto" alt="Foto actual">
+            <div *ngIf="!usuario.foto" class="no-foto">
+              <ion-icon name="person-outline"></ion-icon>
+              <span>Sin foto</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flecha separadora -->
+        <div class="foto-arrow">
+          <ion-icon name="arrow-forward"></ion-icon>
+        </div>
+
+        <!-- Foto pendiente -->
+        <div class="foto-column">
+          <div class="foto-label">Foto Nueva (Pendiente)</div>
+          <div class="foto-wrapper highlight">
+            <img *ngIf="usuario.foto_pendiente" [src]="usuario.foto_pendiente" alt="Foto pendiente">
+          </div>
+        </div>
+      </div>
+
+      <div class="review-actions">
+        <ion-button
+          expand="block"
+          color="success"
+          (click)="aprobarFoto(usuario)"
+          [disabled]="procesando">
+          <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+          Aprobar Foto
+        </ion-button>
+
+        <ion-button
+          expand="block"
+          color="danger"
+          fill="outline"
+          (click)="rechazarFoto(usuario)"
+          [disabled]="procesando">
+          <ion-icon name="close-circle" slot="start"></ion-icon>
+          Rechazar Foto
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+</ion-content>

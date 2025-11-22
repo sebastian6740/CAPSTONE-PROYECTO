@@ -1,38 +1,87 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar>
-    <div class="header-content">
-      <div class="header-title">
-        <h1>Trueque App</h1>
-         <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
-        <p>Intercambia lo que quieras</p>
-      </div>
-      <!-- Barra de búsqueda -->
-      <div class="search-bar">
-        <ion-searchbar placeholder="Buscar" mode="ios"></ion-searchbar>
-      </div>
+<ion-content [scrollEvents]="true" (ionScroll)="onScroll($event)">
+  <div class="sticky-header" [class.header-hidden]="headerHidden">
+    <ion-toolbar class="contenido">
+        <!-- Cubos animados de fondo -->
+        <div class="cube"></div>
+        <div class="cube"></div>
+        <div class="cube"></div>
+        <div class="cube"></div>
+        <div class="cube"></div>
+        <div class="cube"></div>
 
-      <!-- Filtros -->
-      <div class="filters">
-        <ion-button fill="outline" size="small">
-          <ion-icon name="funnel-outline" slot="start"></ion-icon>
-          Categoría
-        </ion-button>
-        <ion-button fill="outline" size="small">
-          <ion-icon name="location-outline" slot="start"></ion-icon>
-          Cerca de mí
-        </ion-button>
-      </div>
-    </div>
-  </ion-toolbar>
-</ion-header>
+        <div class="header-title">
+          <h1>Trueque App</h1>
+           <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
+          <p>Intercambia lo que quieras</p>
+        </div>
 
-<ion-content class="ion-padding">
+        <!-- Widget de Puntos -->
+        <div class="puntos-widget" (click)="irARecompensas()">
+          <div class="puntos-contenido">
+            <span class="puntos-icono">💎</span>
+            <div class="puntos-texto">
+              <span class="puntos-label">Mis Puntos</span>
+              <span class="puntos-valor">{{ puntosActuales }}</span>
+            </div>
+          </div>
+          <ion-icon name="chevron-forward" class="puntos-flecha"></ion-icon>
+        </div>
+
+        <!-- Barra de búsqueda -->
+        <div class="search-bar">
+          <ion-searchbar placeholder="Buscar" mode="ios"></ion-searchbar>
+        </div>
+
+        <!-- Filtros de categoría -->
+        <div class="filters">
+          <ion-button
+            [fill]="categoriaSeleccionada === '' ? 'solid' : 'outline'"
+            size="small"
+            (click)="filtrarPorCategoria('')">
+            Todos
+          </ion-button>
+          <ion-button
+            [fill]="categoriaSeleccionada === 'electronica' ? 'solid' : 'outline'"
+            size="small"
+            (click)="filtrarPorCategoria('electronica')">
+            📱 Electrónica
+          </ion-button>
+          <ion-button
+            [fill]="categoriaSeleccionada === 'videojuegos' ? 'solid' : 'outline'"
+            size="small"
+            (click)="filtrarPorCategoria('videojuegos')">
+            🎮 Videojuegos
+          </ion-button>
+          <ion-button
+            [fill]="categoriaSeleccionada === 'libros' ? 'solid' : 'outline'"
+            size="small"
+            (click)="filtrarPorCategoria('libros')">
+            📚 Libros
+          </ion-button>
+          <ion-button
+            [fill]="categoriaSeleccionada === 'ropa' ? 'solid' : 'outline'"
+            size="small"
+            (click)="filtrarPorCategoria('ropa')">
+            👕 Ropa
+          </ion-button>
+        </div>
+    </ion-toolbar>
+  </div>
+  <!-- Mensaje cuando no hay artículos -->
+  <div *ngIf="trueques.length === 0" class="sin-articulos">
+    <ion-icon name="cube-outline" class="icono-vacio"></ion-icon>
+    <h3>No hay artículos</h3>
+    <p *ngIf="categoriaSeleccionada">No hay artículos en esta categoría</p>
+    <p *ngIf="!categoriaSeleccionada">¡Sé el primero en publicar un artículo!</p>
+  </div>
+
   <!-- Grid de trueques -->
-  <div class="trueques-grid">
+  <div class="trueques-grid" *ngIf="trueques.length > 0">
     <div *ngFor="let trueque of trueques" class="trueque-card" (click)="verDetalle(trueque)">
       <!-- Imagen/Emoji -->
       <div [ngClass]="trueque.color" class="trueque-imagen">
-        {{ trueque.emoji }}
+        <img *ngIf="trueque.foto" [src]="trueque.foto" alt="Foto del artículo" class="articulo-foto">
+        <span *ngIf="!trueque.foto">{{ trueque.emoji }}</span>
       </div>
 
       <!-- Contenido -->
@@ -46,8 +95,8 @@
         </div>
       </div>
 
-      <!-- Botón -->
-      <ion-button expand="block" color="gray" size="small">
+      <!-- Botón Ver Detalle -->
+      <ion-button expand="block" color="primary" size="small" (click)="verDetalle(trueque)">
         Ver detalle
       </ion-button>
     </div>
@@ -66,7 +115,7 @@
 
 
 <!-- Bottom Navigation -->
-<ion-footer class="ion-no-border">
+<ion-footer class="contenido-menu">
   <ion-toolbar>
     <div class="bottom-nav">
       <button 
@@ -77,11 +126,14 @@
         <span>Inicio</span>
       </button>
 
-      <button 
-        class="nav-button" 
+      <button
+        class="nav-button"
         [class.active]="tabActiva === 'messages'"
-        (click)="cambiarTab('')">
-        <ion-icon name="chatbubble-outline"></ion-icon>
+        (click)="cambiarTab('messages')">
+        <div class="icon-with-badge">
+          <ion-icon name="chatbubble-outline"></ion-icon>
+          <span *ngIf="mensajesNoLeidos > 0" class="badge-count">{{ mensajesNoLeidos }}</span>
+        </div>
         <span>Mensajes</span>
       </button>
 

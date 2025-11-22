@@ -35,3 +35,21 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+
+// ============================================
+// ESTILOS GLOBALES DE MODALES
+// ============================================
+
+// Modal de detalle de usuario - responsive
+.modal-detalle-usuario {
+  --width: 95%;
+  --max-width: 500px;
+  --height: 90%;
+  --border-radius: 16px;
+
+  // En tablets y escritorio
+  @media (min-width: 768px) {
+    --width: 600px;
+    --max-width: 700px;
+  }
+}

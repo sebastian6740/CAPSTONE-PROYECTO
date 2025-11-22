@@ -1,0 +1,94 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Mis Trueques</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Estado vacío -->
+  <div *ngIf="misArticulos.length === 0" class="empty-state">
+    <ion-icon name="cube-outline"></ion-icon>
+    <h3>No has publicado artículos</h3>
+    <p>Publica tu primer artículo para empezar a intercambiar</p>
+    <ion-button expand="block" color="primary" (click)="publicarArticulo()">
+      <ion-icon name="add-circle" slot="start"></ion-icon>
+      Publicar artículo
+    </ion-button>
+  </div>
+
+  <!-- Lista de artículos -->
+  <div *ngIf="misArticulos.length > 0" class="articulos-list">
+    <div *ngFor="let articulo of misArticulos" class="articulo-card">
+      <!-- Imagen del artículo -->
+      <div class="articulo-imagen">
+        <img *ngIf="articulo.fotos && articulo.fotos.length > 0" [src]="articulo.fotos[0]" alt="Foto">
+        <div *ngIf="!articulo.fotos || articulo.fotos.length === 0" class="no-image">
+          <ion-icon name="image-outline"></ion-icon>
+        </div>
+
+        <!-- Indicador de disponibilidad -->
+        <div class="estado-indicator" [class.disponible]="articulo.disponible" [class.permutado]="!articulo.disponible">
+          <div class="circulo"></div>
+          <span>{{ articulo.disponible ? 'Disponible' : 'Permutado' }}</span>
+        </div>
+      </div>
+
+      <!-- Info del artículo -->
+      <div class="articulo-info">
+        <h3>{{ articulo.nombre }}</h3>
+        <ion-badge color="primary" class="categoria-badge">{{ articulo.categoria }}</ion-badge>
+        <p class="descripcion">{{ articulo.descripcion }}</p>
+        <div class="fecha">
+          <ion-icon name="calendar-outline"></ion-icon>
+          <span>{{ articulo.fechaPublicacion | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="articulo-acciones">
+        <ion-button
+          fill="outline"
+          size="small"
+          (click)="verDetalle(articulo)"
+          expand="block">
+          <ion-icon name="eye-outline" slot="start"></ion-icon>
+          Ver detalle
+        </ion-button>
+
+        <ion-button
+          *ngIf="articulo.disponible"
+          color="danger"
+          size="small"
+          (click)="marcarComoPermutado(articulo)"
+          expand="block">
+          <ion-icon name="close-circle" slot="start"></ion-icon>
+          Marcar como permutado
+        </ion-button>
+
+        <ion-button
+          *ngIf="!articulo.disponible"
+          color="success"
+          size="small"
+          (click)="marcarComoDisponible(articulo)"
+          expand="block">
+          <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+          Marcar como disponible
+        </ion-button>
+
+        <ion-button
+          fill="clear"
+          size="small"
+          color="danger"
+          (click)="eliminarArticulo(articulo)">
+          <ion-icon name="trash-outline" slot="start"></ion-icon>
+          Eliminar
+        </ion-button>
+      </div>
+    </div>
+  </div>
+</ion-content>

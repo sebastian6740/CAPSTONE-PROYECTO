@@ -1,0 +1,206 @@
+ion-content {
+  --background: #f5f5f5;
+}
+
+// Header - Forzar visibilidad del botón de volver
+::ng-deep {
+  ion-header ion-toolbar[color="primary"] {
+    ion-back-button {
+      --color: white;
+      --icon-font-size: 24px;
+      color: white !important;
+    }
+
+    ion-button {
+      --color: white;
+      color: white !important;
+
+      ion-icon {
+        color: white !important;
+        font-size: 24px;
+      }
+    }
+
+    ion-title {
+      color: white !important;
+      font-weight: 600;
+    }
+  }
+}
+
+ion-searchbar {
+  --background: white;
+  --border-radius: 8px;
+  --color: #333333;
+  --placeholder-color: #999999;
+  --icon-color: #666666;
+  --clear-button-color: #666666;
+  padding: 10px 16px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  color: #999;
+
+  ion-icon {
+    font-size: 80px;
+    color: #ddd;
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #666;
+    margin: 0 0 10px 0;
+  }
+
+  p {
+    font-size: 14px;
+    color: #999;
+    margin: 0;
+  }
+}
+
+.conversaciones-list {
+  padding: 0;
+}
+
+.conversacion-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:active {
+    background: #f8f8f8;
+  }
+
+  .avatar-container {
+    position: relative;
+    flex-shrink: 0;
+
+    img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .avatar-placeholder {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      ion-icon {
+        font-size: 28px;
+        color: white;
+      }
+    }
+
+    .unread-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #25d366;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  .conversacion-info {
+    flex: 1;
+    min-width: 0;
+
+    .info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+
+      .nombre {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
+
+      .timestamp {
+        font-size: 12px;
+        color: #999;
+        margin-left: 8px;
+        flex-shrink: 0;
+      }
+    }
+
+    .articulo-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: #667eea;
+
+      ion-icon {
+        font-size: 14px;
+      }
+
+      span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .ultimo-mensaje {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &.no-leido {
+        color: #2c3e50;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .conversacion-actions {
+    flex-shrink: 0;
+
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+
+      ion-icon {
+        font-size: 20px;
+        color: #999;
+      }
+    }
+  }
+}
