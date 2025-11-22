@@ -1,0 +1,62 @@
+<ion-content class="notificaciones-content">
+  <div class="notificaciones-header">
+    <h2>Notificaciones</h2>
+    <ion-buttons>
+      <ion-button
+        *ngIf="tieneNotificacionesNoLeidas()"
+        (click)="marcarTodasLeidas()"
+        size="small"
+        fill="clear">
+        <ion-icon slot="icon-only" name="checkmark-done"></ion-icon>
+      </ion-button>
+      <ion-button (click)="cerrar()" size="small" fill="clear">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </div>
+
+  <div *ngIf="cargando" class="loading-container">
+    <ion-spinner></ion-spinner>
+    <p>Cargando notificaciones...</p>
+  </div>
+
+  <div *ngIf="!cargando && notificaciones.length === 0" class="empty-container">
+    <ion-icon name="notifications-off-outline" class="empty-icon"></ion-icon>
+    <p>No tienes notificaciones</p>
+  </div>
+
+  <ion-list *ngIf="!cargando && notificaciones.length > 0" lines="none">
+    <ion-item
+      *ngFor="let notificacion of notificaciones"
+      [class.no-leida]="!notificacion.leida"
+      (click)="clickNotificacion(notificacion)"
+      button>
+
+      <ion-icon
+        slot="start"
+        [name]="getIconoNotificacion(notificacion.tipo)"
+        [color]="getColorNotificacion(notificacion.tipo)">
+      </ion-icon>
+
+      <ion-label>
+        <h3>{{ notificacion.titulo }}</h3>
+        <p>{{ notificacion.mensaje }}</p>
+
+        <!-- Motivo de rechazo si existe -->
+        <div *ngIf="notificacion.articuloRelacionado?.motivo" class="motivo-rechazo">
+          <strong>Motivo:</strong> {{ notificacion.articuloRelacionado?.motivo }}
+        </div>
+
+        <p class="fecha">{{ notificacion.fecha | firebaseDate | date:'dd/MM/yyyy HH:mm' }}</p>
+      </ion-label>
+
+      <ion-button
+        slot="end"
+        fill="clear"
+        size="small"
+        (click)="eliminarNotificacion($event, notificacion)">
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+  </ion-list>
+</ion-content>

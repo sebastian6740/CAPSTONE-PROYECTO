@@ -5,13 +5,14 @@ import { IonicModule, AlertController, ToastController } from '@ionic/angular';
 import { ArticulosService, Articulo } from '../../core/services/articulos';
 import { AuthService } from '../../core/services/auth.service';
 import { RecompensasService } from '../../core/services/recompensas.service';
+import { FirebaseDatePipe } from '../../core/pipes/firebase-date.pipe';
 
 @Component({
   selector: 'app-mis-trueques',
   standalone: true,
   templateUrl: './mis-trueques.component.html',
   styleUrls: ['./mis-trueques.component.scss'],
-  imports: [CommonModule, IonicModule]
+  imports: [CommonModule, IonicModule, FirebaseDatePipe]
 })
 export class MisTruequesComponent implements OnInit {
 

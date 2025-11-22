@@ -81,8 +81,8 @@ export class RecompensasComponent implements OnInit {
     await alert.present();
   }
 
-  private procesarCanje(voucher: Voucher) {
-    const resultado = this.recompensasService.canjearVoucher(voucher.id);
+  private async procesarCanje(voucher: Voucher) {
+    const resultado = await this.recompensasService.canjearVoucher(voucher.id);
 
     if (resultado.exito) {
       this.mostrarMensaje(resultado.mensaje, 'success');

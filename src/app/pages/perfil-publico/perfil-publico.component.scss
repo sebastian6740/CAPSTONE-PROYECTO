@@ -1,0 +1,610 @@
+ion-content {
+  --background: linear-gradient(180deg, #4169E1 0%, #6B8FF2 50%, #f5f7fa 50%);
+}
+
+.perfil-container {
+  padding: 0;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+// Header del Usuario con diseño moderno
+.usuario-header {
+  text-align: center;
+  padding: 30px 20px 24px;
+  background: transparent;
+  margin-bottom: 20px;
+  position: relative;
+
+  .avatar-container {
+    margin-bottom: 16px;
+    position: relative;
+    display: inline-block;
+
+    .avatar-img {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 5px solid white;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    // Anillo de decoración alrededor del avatar
+    &::after {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: -8px;
+      right: -8px;
+      bottom: -8px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+    }
+  }
+
+  .usuario-nombre {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 8px 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    .badge-verificado {
+      font-size: 12px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+
+      ion-icon {
+        font-size: 14px;
+      }
+    }
+  }
+
+  .usuario-ubicacion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 15px;
+    margin-bottom: 16px;
+    font-weight: 500;
+
+    ion-icon {
+      font-size: 18px;
+    }
+  }
+
+  .usuario-bio {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 12px 0 20px;
+    padding: 0 30px;
+    font-style: italic;
+  }
+}
+
+// Calificación destacada con estrellas grandes
+.calificacion-destacada {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin: -20px 16px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+
+  .calificacion-principal {
+    text-align: center;
+    margin-bottom: 16px;
+
+    .numero-calificacion {
+      font-size: 48px;
+      font-weight: 700;
+      color: #FFA000;
+      line-height: 1;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      span {
+        font-size: 24px;
+        color: #999;
+      }
+    }
+    .estrellas-grandes {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+
+      ion-icon {
+        font-size: 32px;
+        color: #FFA000;
+      }
+    }
+
+    .total-resenas {
+      font-size: 13px;
+      color: #666;
+      font-weight: 500;
+    }
+  }
+}
+
+// Estadísticas
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+  padding: 0 16px;
+  margin-bottom: 16px;
+
+  .stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 16px 12px;
+    border-radius: 12px;
+    flex: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s;
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    ion-icon {
+      font-size: 32px;
+      color: #4169E1;
+    }
+
+    .stat-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+
+      .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #2c3e50;
+        line-height: 1.2;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 2px;
+      }
+    }
+  }
+}
+
+// Distribución de Calificaciones
+.calificaciones-distribucion {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 0 16px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ion-icon {
+      font-size: 22px;
+      color: #FFA000;
+    }
+  }
+
+  .barra-calificacion {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    .estrella-label {
+      min-width: 50px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #FFA000;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .barra-progreso {
+      flex: 1;
+      height: 24px;
+      background: #f0f2f5;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+
+      .barra-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #FFD700, #FFA000);
+        transition: width 0.5s ease;
+        box-shadow: 0 0 8px rgba(255, 165, 0, 0.3);
+      }
+    }
+
+    .cantidad {
+      min-width: 35px;
+      text-align: right;
+      font-size: 15px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+  }
+}
+
+// Botón Calificar
+.calificar-container {
+  margin: 0 16px 16px;
+
+  ion-button {
+    --border-radius: 12px;
+    height: 50px;
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  ion-chip {
+    width: 100%;
+    justify-content: center;
+    height: 50px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+// Formulario de Calificación
+.formulario-calificacion {
+  margin: 0 16px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+
+  ion-card-header {
+    padding: 20px 20px 12px;
+    background: linear-gradient(135deg, #4169E1 0%, #6B8FF2 100%);
+    border-radius: 16px 16px 0 0;
+
+    ion-card-title {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+    }
+  }
+
+  ion-card-content {
+    padding: 20px;
+  }
+
+  .selector-estrellas {
+    margin-bottom: 20px;
+
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 12px;
+    }
+
+    .estrellas-input {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      padding: 12px;
+      background: #fff;
+      border-radius: 12px;
+      border: 2px solid #e0e0e0;
+      position: relative;
+      z-index: 10;
+
+      .estrella-unicode {
+        font-size: 48px;
+        cursor: pointer;
+        transition: all 0.2s;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+        user-select: none;
+        line-height: 1;
+        display: inline-block;
+
+        &:hover {
+          transform: scale(1.15) rotate(15deg);
+        }
+
+        &:active {
+          transform: scale(1.05) rotate(0deg);
+        }
+      }
+
+      ion-icon {
+        font-size: 42px !important;
+        cursor: pointer;
+        transition: all 0.2s;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+        position: relative;
+        z-index: 11;
+        display: block;
+        width: 42px;
+        height: 42px;
+
+        &:hover {
+          transform: scale(1.15) rotate(15deg);
+        }
+
+        &:active {
+          transform: scale(1.05) rotate(0deg);
+        }
+      }
+    }
+  }
+
+  ion-item {
+    --background: #f8f9fa;
+    --border-radius: 12px;
+    margin-bottom: 8px;
+
+    ion-label {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    ion-textarea {
+      --padding-start: 12px;
+      --padding-top: 12px;
+      font-size: 14px;
+      --color: #2c3e50;
+      --placeholder-color: #999;
+      color: #2c3e50;
+    }
+  }
+
+  .contador-caracteres {
+    text-align: right;
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .form-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+
+    ion-button {
+      --border-radius: 10px;
+      height: 44px;
+      font-weight: 600;
+    }
+  }
+
+  .spinner-btn {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+  }
+}
+
+// Sección de Comentarios
+.comentarios-section {
+  padding: 0 16px;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ion-badge {
+      font-size: 14px;
+    }
+  }
+}
+
+.sin-comentarios {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 16px;
+  color: #999;
+
+  .icono-vacio {
+    font-size: 80px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+    color: #4169E1;
+  }
+
+  p {
+    font-size: 16px;
+  }
+}
+
+.comentarios-lista {
+  .comentario-card {
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+
+    ion-card-content {
+      padding: 20px;
+    }
+
+    .comentario-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+
+      .comentario-usuario {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex: 1;
+
+        .comentario-avatar {
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 3px solid #4169E1;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .comentario-info {
+          flex: 1;
+
+          h4 {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+          }
+
+          .comentario-estrellas {
+            display: flex;
+            gap: 3px;
+
+            .estrella-small {
+              font-size: 18px;
+              color: #FFA000;
+            }
+          }
+        }
+      }
+
+      .comentario-fecha {
+        font-size: 12px;
+        color: #999;
+        white-space: nowrap;
+        font-weight: 500;
+      }
+    }
+
+    .comentario-texto {
+      color: #555;
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border-left: 3px solid #4169E1;
+    }
+  }
+}
+
+// Estado de carga
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #999;
+
+  ion-spinner {
+    margin-bottom: 16px;
+    --color: #4169E1;
+  }
+
+  p {
+    font-size: 16px;
+  }
+}
+
+// Responsive
+@media (max-width: 576px) {
+  .stats-row {
+    gap: 8px;
+
+    .stat-box {
+      padding: 12px 8px;
+
+      ion-icon {
+        font-size: 28px;
+      }
+
+      .stat-info {
+        .stat-value {
+          font-size: 18px;
+        }
+
+        .stat-label {
+          font-size: 10px;
+        }
+      }
+    }
+  }
+
+  .usuario-header {
+    padding: 24px 16px 20px;
+
+    .avatar-container .avatar-img {
+      width: 110px;
+      height: 110px;
+    }
+
+    .usuario-nombre {
+      font-size: 22px;
+    }
+
+    .usuario-bio {
+      padding: 0 20px;
+    }
+  }
+
+  .calificacion-destacada {
+    margin: -20px 12px 12px;
+    padding: 16px;
+
+    .calificacion-principal {
+      .numero-calificacion {
+        font-size: 40px;
+      }
+
+      .estrellas-grandes ion-icon {
+        font-size: 28px;
+      }
+    }
+  }
+
+  .formulario-calificacion {
+    .selector-estrellas .estrellas-input {
+      gap: 8px;
+
+      .estrella-clickable {
+        font-size: 36px;
+      }
+    }
+  }
+}

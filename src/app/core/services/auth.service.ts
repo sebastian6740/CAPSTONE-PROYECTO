@@ -1,177 +1,470 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable, inject, NgZone } from '@angular/core';
+import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
+import { map, switchMap, catchError, tap } from 'rxjs/operators';
 import { Usuario, RespuestaActualizacion, RespuestaFoto } from '../models/user.model';
-import { v4 as uuid } from 'uuid';
+import {
+  Auth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+  updateProfile
+} from '@angular/fire/auth';
+import {
+  Firestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  writeBatch,
+  serverTimestamp,
+  onSnapshot,
+  Timestamp
+} from '@angular/fire/firestore';
+import {
+  Storage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+} from '@angular/fire/storage';
 
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  private auth = inject(Auth);
+  private firestore = inject(Firestore);
+  private storage = inject(Storage);
+  private ngZone = inject(NgZone);
+
   private usuarioActual$ = new BehaviorSubject<Usuario | null>(null);
-  private usuarios: Usuario[] = [];
   private readonly DIAS_LIMITE_FOTO = 30;
 
+  private firestoreDisponible = false;
+  private mensajesService: any; // Lazy injection para evitar dependencia circular
+
+  // Detección de sesión dual
+  private sesionTokenLocal: string = '';
+  private sesionListener: any = null;
+  public sesionDualDetectada$ = new BehaviorSubject<boolean>(false);
+
   constructor() {
-    this.cargarUsuarios();
-    this.inicializarAdminDefault();
-    this.cargarSesionActual();
+    // Verificar disponibilidad de Firestore antes de inicializar
+    this.verificarFirestore().then(() => {
+      this.inicializarAuthListener();
+      // Inicializar admin después de un delay para evitar race conditions
+      setTimeout(() => {
+        this.inicializarAdminDefault();
+      }, 2000);
+    });
   }
 
-  private cargarUsuarios() {
-    const usuariosGuardados = localStorage.getItem('usuarios');
-    if (usuariosGuardados) {
-      this.usuarios = JSON.parse(usuariosGuardados);
+  // Método para inyectar el servicio de mensajes (lazy injection)
+  setMensajesService(mensajesService: any) {
+    this.mensajesService = mensajesService;
+  }
+
+  /**
+   * Verificar que Firestore esté disponible
+   */
+  private async verificarFirestore(): Promise<void> {
+    try {
+      // Intentar una operación simple para verificar conectividad
+      const testRef = doc(this.firestore, '_test_', 'connection');
+      await getDoc(testRef);
+      this.firestoreDisponible = true;
+      console.log('✅ Firestore conectado correctamente');
+    } catch (error: any) {
+      console.error('❌ Error al conectar con Firestore:', error);
+      if (error.code === 'failed-precondition' || error.message?.includes('offline')) {
+        console.error('⚠️ Firestore Database no está configurado o las reglas están bloqueando el acceso');
+        console.error('📖 Revisa el archivo CONFIGURAR_FIREBASE.md para instrucciones');
+      }
+      this.firestoreDisponible = false;
     }
   }
 
-  private cargarSesionActual() {
-    const usuarioSesion = localStorage.getItem('usuarioActual');
-    if (usuarioSesion) {
-      const usuario = JSON.parse(usuarioSesion);
-      this.usuarioActual$.next(usuario);
+  /**
+   * Listener de cambios en autenticación de Firebase
+   */
+  private inicializarAuthListener() {
+    onAuthStateChanged(this.auth, async (firebaseUser) => {
+      this.ngZone.run(async () => {
+        if (firebaseUser) {
+          // Usuario autenticado - cargar datos de Firestore
+          const usuario = await this.cargarUsuarioDeFirestore(firebaseUser.uid);
+          this.usuarioActual$.next(usuario);
+
+          // Reiniciar listeners de mensajes cuando hay un nuevo usuario
+          if (this.mensajesService && typeof this.mensajesService.reiniciarListeners === 'function') {
+            console.log('🔄 Reiniciando listeners de mensajes para nuevo usuario...');
+            this.mensajesService.reiniciarListeners();
+          }
+        } else {
+          // Usuario no autenticado
+          this.usuarioActual$.next(null);
+        }
+      });
+    });
+  }
+
+  /**
+   * Cargar datos del usuario desde Firestore
+   */
+  private async cargarUsuarioDeFirestore(uid: string, intentos: number = 0): Promise<Usuario | null> {
+    // Verificar que Firestore esté disponible
+    if (!this.firestoreDisponible && intentos === 0) {
+      console.warn('⚠️ Firestore no está disponible. Intenta configurar Firestore Database en Firebase Console.');
+      return null;
     }
-  }
 
-  private guardarUsuarios() {
-    localStorage.setItem('usuarios', JSON.stringify(this.usuarios));
-  }
+    try {
+      const userDocRef = doc(this.firestore, 'usuarios', uid);
+      const userDoc = await getDoc(userDocRef);
 
-  private guardarSesionActual(usuario: Usuario | null) {
-    if (usuario) {
-      localStorage.setItem('usuarioActual', JSON.stringify(usuario));
-    } else {
-      localStorage.removeItem('usuarioActual');
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        const usuario = {
+          ...data,
+          id: userDoc.id,
+          fechaRegistro: data['fechaRegistro']?.toDate?.() || new Date(),
+          ultima_actualizacion_foto: data['ultima_actualizacion_foto']?.toDate?.() || undefined,
+          ultima_actualizacion_perfil: data['ultima_actualizacion_perfil']?.toDate?.() || new Date()
+        } as Usuario;
+
+        console.log(`✅ Usuario ${usuario.nombre} cargado correctamente`);
+        return usuario;
+      } else {
+        // Si el documento no existe y es el primer intento, esperar un poco y reintentar
+        // Esto maneja el caso donde el listener se dispara antes de que Firestore termine de guardar
+        if (intentos < 3) {
+          console.log(`⏳ Usuario no encontrado, reintentando... (intento ${intentos + 1}/3)`);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return this.cargarUsuarioDeFirestore(uid, intentos + 1);
+        } else {
+          console.error(`❌ Usuario con ID ${uid} no encontrado en Firestore después de ${intentos} intentos`);
+        }
+      }
+      return null;
+    } catch (error: any) {
+      console.error('❌ Error al cargar usuario de Firestore:', error);
+
+      // Mensajes de error más descriptivos
+      if (error.code === 'permission-denied') {
+        console.error('⛔ Permiso denegado. Verifica las reglas de seguridad de Firestore.');
+        console.error('📖 Las reglas deben permitir: allow read, write: if true; (para testing)');
+      } else if (error.code === 'unavailable' || error.message?.includes('offline')) {
+        console.error('📡 Firestore no disponible. Verifica:');
+        console.error('   1. Que Firestore Database esté creado en Firebase Console');
+        console.error('   2. Que las reglas de seguridad permitan acceso');
+        console.error('   3. Tu conexión a internet');
+      }
+
+      // Si hay error de conexión offline y es el primer intento, reintentar
+      if (intentos < 3) {
+        console.log(`🔄 Reintentando cargar usuario después de error... (intento ${intentos + 1}/3)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return this.cargarUsuarioDeFirestore(uid, intentos + 1);
+      }
+      return null;
     }
   }
 
   /**
    * Inicializar usuario admin por defecto si no existe
    */
-  private inicializarAdminDefault() {
-    const adminExiste = this.usuarios.some(u => u.rol === 'admin');
+  private async inicializarAdminDefault() {
+    try {
+      // Verificar si ya existe un admin
+      const adminQuery = query(
+        collection(this.firestore, 'usuarios'),
+        where('rol', '==', 'admin')
+      );
+      const adminSnapshot = await getDocs(adminQuery);
 
-    if (!adminExiste) {
-      const adminDefault: Usuario = {
-        id: 'admin-default-id',
-        nombre: 'Administrador',
-        email: 'admin@trueques.com',
-        contrasena: 'admin123',
-        telefono: '+56912345678',
-        ciudad: 'Santiago',
-        foto: undefined,
-        fechaRegistro: new Date(),
-        calificacion: 5,
-        biografia: 'Cuenta de administrador del sistema',
-        trueques_realizados: 0,
-        trueques_pendientes: 0,
-        recompensas: 0,
-        insignias: ['admin'],
-        verificado: true,
-        ultima_actualizacion_foto: undefined,
-        ultima_actualizacion_perfil: new Date(),
-        rol: 'admin'
-      };
+      if (adminSnapshot.empty) {
+        // Crear cuenta de Firebase Auth para admin
+        const adminEmail = 'admin@trueques.com';
+        const adminPassword = 'admin123';
 
-      this.usuarios.push(adminDefault);
-      this.guardarUsuarios();
-      console.log('✅ Usuario admin creado: admin@trueques.com / admin123');
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            this.auth,
+            adminEmail,
+            adminPassword
+          );
+
+          const adminData: Omit<Usuario, 'id'> = {
+            nombre: 'Administrador',
+            email: adminEmail,
+            contrasena: '', // No guardamos la contraseña en Firestore
+            telefono: '+56912345678',
+            ciudad: 'Santiago',
+            foto: undefined,
+            fechaRegistro: new Date(),
+            calificacion: 5,
+            biografia: 'Cuenta de administrador del sistema',
+            trueques_realizados: 0,
+            trueques_pendientes: 0,
+            recompensas: 0,
+            insignias: ['admin'],
+            verificado: true,
+            ultima_actualizacion_foto: undefined,
+            ultima_actualizacion_perfil: new Date(),
+            rol: 'admin'
+          };
+
+          // Guardar datos en Firestore
+          await setDoc(doc(this.firestore, 'usuarios', userCredential.user.uid), {
+            ...adminData,
+            fechaRegistro: serverTimestamp(),
+            ultima_actualizacion_perfil: serverTimestamp()
+          });
+
+          console.log('✅ Usuario admin creado: admin@trueques.com / admin123');
+
+          // Hacer logout del admin para que el usuario normal pueda iniciar sesión
+          await signOut(this.auth);
+        } catch (error: any) {
+          // Si el error es que el email ya existe, simplemente ignorar
+          if (error.code !== 'auth/email-already-in-use') {
+            console.error('Error al crear admin:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar admin:', error);
     }
   }
 
-  registrar(datosRegistro: any): Observable<{exito: boolean, mensaje: string}> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        const emailExiste = this.usuarios.some(u => u.email === datosRegistro.email);
-        if (emailExiste) {
-          observer.next({
-            exito: false,
-            mensaje: 'El email ya está registrado'
+  /**
+   * Registrar nuevo usuario
+   */
+  registrar(datosRegistro: any): Observable<{exito: boolean, mensaje: string, detalleError?: string}> {
+    // Validación previa
+    if (datosRegistro.contrasena !== datosRegistro.confirmarContrasena) {
+      return of({
+        exito: false,
+        mensaje: 'Las contraseñas no coinciden'
+      });
+    }
+
+    // Verificar disponibilidad de Firestore
+    if (!this.firestoreDisponible) {
+      return of({
+        exito: false,
+        mensaje: 'Base de datos no disponible',
+        detalleError: 'Firestore Database no está configurado. Revisa CONFIGURAR_FIREBASE.md'
+      });
+    }
+
+    console.log('📝 Iniciando registro de usuario:', datosRegistro.email);
+
+    return from(
+      createUserWithEmailAndPassword(
+        this.auth,
+        datosRegistro.email,
+        datosRegistro.contrasena
+      )
+    ).pipe(
+      switchMap(async (userCredential) => {
+        console.log('✅ Usuario creado en Firebase Auth:', userCredential.user.uid);
+
+        try {
+          // Crear documento de usuario en Firestore
+          const nuevoUsuario: any = {
+            nombre: datosRegistro.nombre,
+            email: datosRegistro.email,
+            telefono: datosRegistro.telefono,
+            ciudad: datosRegistro.ciudad,
+            fechaRegistro: serverTimestamp(),
+            calificacion: 5,
+            biografia: '',
+            trueques_realizados: 0,
+            trueques_pendientes: 0,
+            recompensas: 0,
+            insignias: [],
+            verificado: false,
+            ultima_actualizacion_perfil: serverTimestamp(),
+            rol: 'user'
+          };
+
+          const userDocRef = doc(this.firestore, 'usuarios', userCredential.user.uid);
+
+          console.log('💾 Guardando datos en Firestore...');
+          console.log('📍 Ruta del documento:', `usuarios/${userCredential.user.uid}`);
+          console.log('📦 Datos a guardar:', nuevoUsuario);
+
+          await setDoc(userDocRef, nuevoUsuario);
+
+          console.log('✅ Datos guardados en Firestore correctamente');
+
+          // Actualizar el perfil de Firebase Auth
+          console.log('👤 Actualizando perfil de autenticación...');
+          await updateProfile(userCredential.user, {
+            displayName: datosRegistro.nombre
           });
-          observer.complete();
-          return;
-        }
 
-        if (datosRegistro.contrasena !== datosRegistro.confirmarContrasena) {
-          observer.next({
-            exito: false,
-            mensaje: 'Las contraseñas no coinciden'
-          });
-          observer.complete();
-          return;
-        }
+          // Verificar que el documento se guardó correctamente
+          console.log('🔍 Verificando creación del documento...');
+          const verificarDoc = await getDoc(userDocRef);
+          if (!verificarDoc.exists()) {
+            throw new Error('Error al verificar creación de usuario en Firestore');
+          }
 
-        const nuevoUsuario: Usuario = {
-          id: uuid(),
-          nombre: datosRegistro.nombre,
-          email: datosRegistro.email,
-          contrasena: datosRegistro.contrasena,
-          telefono: datosRegistro.telefono,
-          ciudad: datosRegistro.ciudad,
-          foto: undefined,
-          fechaRegistro: new Date(),
-          calificacion: 5,
-          biografia: '',
-          trueques_realizados: 0,
-          trueques_pendientes: 0,
-          recompensas: 0,
-          insignias: [],
-          verificado: false,
-          ultima_actualizacion_foto: undefined,
-          ultima_actualizacion_perfil: new Date(),
-          rol: 'user'
-        };
-
-        this.usuarios.push(nuevoUsuario);
-        this.guardarUsuarios();
-        this.usuarioActual$.next(nuevoUsuario);
-        this.guardarSesionActual(nuevoUsuario);
-
-        observer.next({
-          exito: true,
-          mensaje: 'Registro exitoso'
-        });
-        observer.complete();
-      }, 1000);
-    });
-  }
-
-  login(email: string, contrasena: string): Observable<{exito: boolean, mensaje: string}> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        const usuario = this.usuarios.find(u => u.email === email && u.contrasena === contrasena);
-        
-        if (usuario) {
-          this.usuarioActual$.next(usuario);
-          this.guardarSesionActual(usuario);
-          observer.next({
+          console.log('✅ Registro completado exitosamente');
+          return {
             exito: true,
-            mensaje: 'Login exitoso'
-          });
-        } else {
-          observer.next({
-            exito: false,
-            mensaje: 'Email o contraseña incorrectos'
-          });
+            mensaje: 'Registro exitoso'
+          };
+        } catch (firestoreError: any) {
+          // Si falla Firestore, eliminar el usuario de Auth para evitar usuarios huérfanos
+          console.error('❌ Error al guardar en Firestore:', firestoreError);
+          console.error('🔍 Código de error:', firestoreError.code);
+          console.error('🔍 Mensaje de error:', firestoreError.message);
+          console.error('🔍 Error completo:', firestoreError);
+
+          console.log('🗑️ Intentando eliminar usuario de Firebase Auth para evitar usuarios huérfanos...');
+          try {
+            await userCredential.user.delete();
+            console.log('✅ Usuario eliminado de Firebase Auth');
+          } catch (deleteError) {
+            console.error('⚠️ No se pudo eliminar el usuario de Auth:', deleteError);
+          }
+
+          throw firestoreError; // Re-lanzar el error para que sea capturado por catchError
         }
-        observer.complete();
-      }, 1000);
-    });
+      }),
+      catchError((error: any) => {
+        console.error('❌ Error en el proceso de registro:', error);
+        console.error('🔍 Código completo del error:', error.code);
+        console.error('🔍 Mensaje completo del error:', error.message);
+        console.error('🔍 Stack trace:', error.stack);
+
+        let mensaje = 'Error al registrar usuario';
+        let detalleError = error.message || 'Error desconocido';
+
+        // Errores de autenticación
+        if (error.code === 'auth/email-already-in-use') {
+          mensaje = 'El email ya está registrado';
+          detalleError = 'Este correo electrónico ya tiene una cuenta asociada. Ve a Firebase Console → Authentication → Users y elimina el usuario si es necesario.';
+        } else if (error.code === 'auth/weak-password') {
+          mensaje = 'La contraseña es muy débil';
+          detalleError = 'La contraseña debe tener al menos 6 caracteres';
+        } else if (error.code === 'auth/invalid-email') {
+          mensaje = 'El email no es válido';
+          detalleError = 'Verifica que el correo electrónico esté bien escrito';
+        }
+        // Errores de Firestore
+        else if (error.code === 'permission-denied') {
+          mensaje = 'Error de permisos en la base de datos';
+          detalleError = 'Las reglas de Firestore están bloqueando el acceso. Las reglas deben permitir escritura.';
+        } else if (error.code === 'unavailable' || error.message?.includes('offline')) {
+          mensaje = 'Base de datos no disponible';
+          detalleError = 'Firestore Database no responde. Verifica tu conexión a internet y que Firestore esté creado en Firebase Console.';
+        } else if (error.code === 'failed-precondition') {
+          mensaje = 'Error de configuración de Firestore';
+          detalleError = 'Firestore Database no está correctamente configurado. Verifica que esté creado en modo "production" en Firebase Console → Build → Firestore Database.';
+        }
+
+        console.error(`💥 ${mensaje}: ${detalleError}`);
+
+        return of({
+          exito: false,
+          mensaje,
+          detalleError
+        });
+      })
+    );
   }
 
+  /**
+   * Iniciar sesión
+   */
+  login(email: string, contrasena: string): Observable<{exito: boolean, mensaje: string}> {
+    return from(
+      signInWithEmailAndPassword(this.auth, email, contrasena)
+    ).pipe(
+      switchMap(async (userCredential) => {
+        // Generar token de sesión único
+        this.sesionTokenLocal = this.generarTokenSesion();
+        console.log(`🔑 Token de sesión generado: ${this.sesionTokenLocal.substring(0, 10)}...`);
+
+        // Guardar token de sesión en Firestore
+        const userDocRef = doc(this.firestore, 'usuarios', userCredential.user.uid);
+        await updateDoc(userDocRef, {
+          sesion_activa: this.sesionTokenLocal,
+          ultima_actividad: serverTimestamp()
+        });
+
+        console.log(`✅ Token de sesión guardado en Firestore`);
+
+        // Iniciar listener de detección de sesión dual
+        this.iniciarListenerSesionDual(userCredential.user.uid);
+
+        return {
+          exito: true,
+          mensaje: 'Login exitoso'
+        };
+      }),
+      catchError((error: any) => {
+        let mensaje = 'Error al iniciar sesión';
+
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          mensaje = 'Email o contraseña incorrectos';
+        } else if (error.code === 'auth/invalid-email') {
+          mensaje = 'El email no es válido';
+        } else if (error.code === 'auth/user-disabled') {
+          mensaje = 'Esta cuenta ha sido deshabilitada';
+        }
+
+        return of({
+          exito: false,
+          mensaje
+        });
+      })
+    );
+  }
+
+  /**
+   * Obtener usuario actual como Observable
+   */
   getUsuarioActual(): Observable<Usuario | null> {
     return this.usuarioActual$.asObservable();
   }
 
+  /**
+   * Obtener usuario actual de forma síncrona
+   */
   getUsuarioActualSync(): Usuario | null {
     return this.usuarioActual$.value;
   }
 
-  logout() {
-    this.usuarioActual$.next(null);
-    this.guardarSesionActual(null);
+  /**
+   * Cerrar sesión
+   */
+  logout(): Observable<void> {
+    // Detener listener de sesión dual
+    this.detenerListenerSesionDual();
+
+    // Limpiar token de sesión local
+    this.sesionTokenLocal = '';
+    this.sesionDualDetectada$.next(false);
+
+    return from(signOut(this.auth));
   }
 
+  /**
+   * Verificar si el usuario está autenticado
+   */
   estaAutenticado(): boolean {
     return this.usuarioActual$.value !== null;
   }
@@ -180,105 +473,116 @@ export class AuthService {
    * Actualizar datos del perfil
    */
   actualizarPerfil(datosActualizados: any): Observable<RespuestaActualizacion> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        const usuarioActual = this.usuarioActual$.value;
-        
-        if (!usuarioActual) {
-          observer.next({
-            exito: false,
-            mensaje: 'No hay usuario autenticado'
-          });
-          observer.complete();
-          return;
-        }
+    const usuarioActual = this.usuarioActual$.value;
 
-        const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-        if (index !== -1) {
-          const usuarioActualizado = {
-            ...this.usuarios[index],
-            ...datosActualizados,
-            ultima_actualizacion_perfil: new Date()
-          };
-          
-          this.usuarios[index] = usuarioActualizado;
-          this.guardarUsuarios();
+    if (!usuarioActual) {
+      return of({
+        exito: false,
+        mensaje: 'No hay usuario autenticado'
+      });
+    }
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+
+    return from(
+      updateDoc(userDocRef, {
+        ...datosActualizados,
+        ultima_actualizacion_perfil: serverTimestamp()
+      })
+    ).pipe(
+      switchMap(async () => {
+        // Recargar usuario actualizado
+        const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+        if (usuarioActualizado) {
           this.usuarioActual$.next(usuarioActualizado);
-          this.guardarSesionActual(usuarioActualizado);
-
-          observer.next({
-            exito: true,
-            mensaje: '✅ Perfil actualizado correctamente',
-            usuario: usuarioActualizado
-          });
-        } else {
-          observer.next({
-            exito: false,
-            mensaje: 'Error al actualizar el perfil'
-          });
         }
-        observer.complete();
-      }, 800);
-    });
+
+        return {
+          exito: true,
+          mensaje: '✅ Perfil actualizado correctamente',
+          usuario: usuarioActualizado || undefined
+        };
+      }),
+      catchError(() => of({
+        exito: false,
+        mensaje: 'Error al actualizar el perfil'
+      }))
+    );
   }
 
   /**
    * Actualizar foto de perfil
    */
-  actualizarFoto(foto: string): Observable<RespuestaFoto> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        const usuarioActual = this.usuarioActual$.value;
-        
-        if (!usuarioActual) {
-          observer.next({
-            exito: false,
-            mensaje: 'No hay usuario autenticado'
-          });
-          observer.complete();
-          return;
-        }
+  actualizarFoto(fotoDataUrl: string): Observable<RespuestaFoto> {
+    const usuarioActual = this.usuarioActual$.value;
 
-        // Verificar si puede cambiar foto
-        if (!this.puedeActualizarFoto()) {
-          const diasRestantes = this.diasParaActualizarFoto();
-          observer.next({
-            exito: false,
-            mensaje: `Debes esperar ${diasRestantes} días para cambiar tu foto`
-          });
-          observer.complete();
-          return;
-        }
+    if (!usuarioActual) {
+      return of({
+        exito: false,
+        mensaje: 'No hay usuario autenticado'
+      });
+    }
 
-        const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-        if (index !== -1) {
-          // La foto queda pendiente de aprobación por el administrador
-          const usuarioActualizado = {
-            ...this.usuarios[index],
-            foto_pendiente: foto,
-            estado_foto: 'pendiente' as const,
-            ultima_actualizacion_foto: new Date()
-          };
+    // Verificar si puede cambiar foto
+    if (!this.puedeActualizarFoto()) {
+      const diasRestantes = this.diasParaActualizarFoto();
+      return of({
+        exito: false,
+        mensaje: `Debes esperar ${diasRestantes} días para cambiar tu foto`
+      });
+    }
 
-          this.usuarios[index] = usuarioActualizado;
-          this.guardarUsuarios();
+    // Convertir DataURL a Blob
+    const blob = this.dataURLtoBlob(fotoDataUrl);
+    const fileName = `foto-perfil-${usuarioActual.id}-${Date.now()}.jpg`;
+    const storageRef = ref(this.storage, `perfiles/${usuarioActual.id}/${fileName}`);
+
+    return from(uploadBytes(storageRef, blob)).pipe(
+      switchMap(() => getDownloadURL(storageRef)),
+      switchMap(async (fotoUrl) => {
+        // Guardar foto como pendiente en Firestore
+        const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+        await updateDoc(userDocRef, {
+          foto_pendiente: fotoUrl,
+          estado_foto: 'pendiente',
+          ultima_actualizacion_foto: serverTimestamp()
+        });
+
+        // Recargar usuario actualizado
+        const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+        if (usuarioActualizado) {
           this.usuarioActual$.next(usuarioActualizado);
-          this.guardarSesionActual(usuarioActualizado);
-
-          observer.next({
-            exito: true,
-            mensaje: '📸 Foto enviada. Está en revisión por el administrador',
-            foto_url: foto
-          });
-        } else {
-          observer.next({
-            exito: false,
-            mensaje: 'Error al actualizar la foto'
-          });
         }
-        observer.complete();
-      }, 1000);
-    });
+
+        return {
+          exito: true,
+          mensaje: '📸 Foto enviada. Está en revisión por el administrador',
+          foto_url: fotoUrl
+        };
+      }),
+      catchError((error) => {
+        console.error('Error al subir foto:', error);
+        return of({
+          exito: false,
+          mensaje: 'Error al subir la foto'
+        });
+      })
+    );
+  }
+
+  /**
+   * Convertir DataURL a Blob
+   */
+  private dataURLtoBlob(dataUrl: string): Blob {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
   }
 
   /**
@@ -316,88 +620,115 @@ export class AuthService {
   /**
    * Agregar recompensas al usuario
    */
-  agregarRecompensa(cantidad: number = 1) {
+  async agregarRecompensa(cantidad: number = 1): Promise<void> {
     const usuarioActual = this.usuarioActual$.value;
-    if (usuarioActual) {
-      const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-      if (index !== -1) {
-        this.usuarios[index].recompensas += cantidad;
-        this.guardarUsuarios();
-        this.usuarioActual$.next(this.usuarios[index]);
-        this.guardarSesionActual(this.usuarios[index]);
-      }
+    if (!usuarioActual) return;
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+    await updateDoc(userDocRef, {
+      recompensas: usuarioActual.recompensas + cantidad
+    });
+
+    // Recargar usuario
+    const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+    if (usuarioActualizado) {
+      this.usuarioActual$.next(usuarioActualizado);
     }
   }
 
   /**
    * Incrementar contador de trueques realizados
    */
-  incrementarTruequeRealizados() {
+  async incrementarTruequeRealizados(): Promise<void> {
     const usuarioActual = this.usuarioActual$.value;
-    if (usuarioActual) {
-      const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-      if (index !== -1) {
-        this.usuarios[index].trueques_realizados += 1;
-        this.guardarUsuarios();
-        this.usuarioActual$.next(this.usuarios[index]);
-        this.guardarSesionActual(this.usuarios[index]);
-      }
+    if (!usuarioActual) return;
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+    await updateDoc(userDocRef, {
+      trueques_realizados: usuarioActual.trueques_realizados + 1
+    });
+
+    // Recargar usuario
+    const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+    if (usuarioActualizado) {
+      this.usuarioActual$.next(usuarioActualizado);
     }
   }
 
   /**
    * Agregar insignia al usuario
    */
-  agregarInsignia(insigniaId: string) {
+  async agregarInsignia(insigniaId: string): Promise<void> {
     const usuarioActual = this.usuarioActual$.value;
-    if (usuarioActual) {
-      const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-      if (index !== -1 && !this.usuarios[index].insignias.includes(insigniaId)) {
-        this.usuarios[index].insignias.push(insigniaId);
-        this.guardarUsuarios();
-        this.usuarioActual$.next(this.usuarios[index]);
-        this.guardarSesionActual(this.usuarios[index]);
-      }
+    if (!usuarioActual || usuarioActual.insignias.includes(insigniaId)) return;
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+    await updateDoc(userDocRef, {
+      insignias: [...usuarioActual.insignias, insigniaId]
+    });
+
+    // Recargar usuario
+    const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+    if (usuarioActualizado) {
+      this.usuarioActual$.next(usuarioActualizado);
     }
   }
 
   /**
    * Verificar usuario
    */
-  verificarUsuario() {
+  async verificarUsuario(): Promise<void> {
     const usuarioActual = this.usuarioActual$.value;
-    if (usuarioActual) {
-      const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-      if (index !== -1) {
-        this.usuarios[index].verificado = true;
-        this.guardarUsuarios();
-        this.usuarioActual$.next(this.usuarios[index]);
-        this.guardarSesionActual(this.usuarios[index]);
-      }
+    if (!usuarioActual) return;
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+    await updateDoc(userDocRef, {
+      verificado: true
+    });
+
+    // Recargar usuario
+    const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+    if (usuarioActualizado) {
+      this.usuarioActual$.next(usuarioActualizado);
     }
   }
 
   /**
    * Actualizar calificación del usuario
    */
-  actualizarCalificacion(nuevaCalificacion: number) {
+  async actualizarCalificacion(nuevaCalificacion: number): Promise<void> {
     const usuarioActual = this.usuarioActual$.value;
-    if (usuarioActual) {
-      const index = this.usuarios.findIndex(u => u.id === usuarioActual.id);
-      if (index !== -1) {
-        this.usuarios[index].calificacion = nuevaCalificacion;
-        this.guardarUsuarios();
-        this.usuarioActual$.next(this.usuarios[index]);
-        this.guardarSesionActual(this.usuarios[index]);
-      }
+    if (!usuarioActual) return;
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
+    await updateDoc(userDocRef, {
+      calificacion: nuevaCalificacion
+    });
+
+    // Recargar usuario
+    const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+    if (usuarioActualizado) {
+      this.usuarioActual$.next(usuarioActualizado);
     }
   }
 
   /**
-   * Obtener todos los usuarios (para pruebas/admin)
+   * Obtener todos los usuarios (para admin)
    */
-  obtenerTodosUsuarios(): Usuario[] {
-    return this.usuarios;
+  async obtenerTodosUsuarios(): Promise<Usuario[]> {
+    try {
+      const usuariosSnapshot = await getDocs(collection(this.firestore, 'usuarios'));
+      return usuariosSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        fechaRegistro: doc.data()['fechaRegistro']?.toDate?.() || new Date(),
+        ultima_actualizacion_foto: doc.data()['ultima_actualizacion_foto']?.toDate?.() || undefined,
+        ultima_actualizacion_perfil: doc.data()['ultima_actualizacion_perfil']?.toDate?.() || new Date()
+      })) as Usuario[];
+    } catch (error) {
+      console.error('Error al obtener usuarios:', error);
+      return [];
+    }
   }
 
   /**
@@ -420,242 +751,367 @@ export class AuthService {
   /**
    * Obtener usuarios con fotos pendientes de aprobación (solo admin)
    */
-  obtenerUsuariosConFotosPendientes(): Usuario[] {
+  async obtenerUsuariosConFotosPendientes(): Promise<Usuario[]> {
     if (!this.esAdmin()) return [];
-    return this.usuarios.filter(u => u.estado_foto === 'pendiente' && u.foto_pendiente);
+
+    try {
+      const fotosQuery = query(
+        collection(this.firestore, 'usuarios'),
+        where('estado_foto', '==', 'pendiente')
+      );
+      const snapshot = await getDocs(fotosQuery);
+
+      return snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        fechaRegistro: doc.data()['fechaRegistro']?.toDate?.() || new Date(),
+        ultima_actualizacion_foto: doc.data()['ultima_actualizacion_foto']?.toDate?.() || undefined,
+        ultima_actualizacion_perfil: doc.data()['ultima_actualizacion_perfil']?.toDate?.() || new Date()
+      })) as Usuario[];
+    } catch (error) {
+      console.error('Error al obtener fotos pendientes:', error);
+      return [];
+    }
   }
 
   /**
    * Aprobar foto de usuario (solo admin)
    */
   aprobarFoto(usuarioId: string): Observable<{exito: boolean, mensaje: string}> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        if (!this.esAdmin()) {
-          observer.next({
+    if (!this.esAdmin()) {
+      return of({
+        exito: false,
+        mensaje: 'No tienes permisos para esta acción'
+      });
+    }
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioId);
+
+    return from(getDoc(userDocRef)).pipe(
+      switchMap(async (userDoc) => {
+        if (!userDoc.exists()) {
+          return {
             exito: false,
-            mensaje: 'No tienes permisos para esta acción'
-          });
-          observer.complete();
-          return;
+            mensaje: 'Usuario no encontrado'
+          };
         }
 
-        const index = this.usuarios.findIndex(u => u.id === usuarioId);
-        if (index !== -1 && this.usuarios[index].foto_pendiente) {
-          // Aprobar la foto pendiente
-          this.usuarios[index].foto = this.usuarios[index].foto_pendiente;
-          this.usuarios[index].estado_foto = 'aprobada';
-          this.usuarios[index].foto_pendiente = undefined;
-
-          this.guardarUsuarios();
-
-          // Si el usuario aprobado es el actual, actualizar sesión
-          if (this.usuarioActual$.value?.id === usuarioId) {
-            this.usuarioActual$.next(this.usuarios[index]);
-            this.guardarSesionActual(this.usuarios[index]);
-          }
-
-          observer.next({
-            exito: true,
-            mensaje: '✅ Foto aprobada correctamente'
-          });
-        } else {
-          observer.next({
+        const userData = userDoc.data();
+        if (!userData['foto_pendiente']) {
+          return {
             exito: false,
             mensaje: 'No hay foto pendiente para este usuario'
-          });
+          };
         }
-        observer.complete();
-      }, 500);
-    });
+
+        // Aprobar la foto
+        await updateDoc(userDocRef, {
+          foto: userData['foto_pendiente'],
+          estado_foto: 'aprobada',
+          foto_pendiente: null
+        });
+
+        // Si el usuario aprobado es el actual, actualizar sesión
+        if (this.usuarioActual$.value?.id === usuarioId) {
+          const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioId);
+          if (usuarioActualizado) {
+            this.usuarioActual$.next(usuarioActualizado);
+          }
+        }
+
+        return {
+          exito: true,
+          mensaje: '✅ Foto aprobada correctamente'
+        };
+      }),
+      catchError(() => of({
+        exito: false,
+        mensaje: 'Error al aprobar la foto'
+      }))
+    );
   }
 
   /**
    * Rechazar foto de usuario (solo admin)
    */
   rechazarFoto(usuarioId: string, motivo?: string): Observable<{exito: boolean, mensaje: string}> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        if (!this.esAdmin()) {
-          observer.next({
+    if (!this.esAdmin()) {
+      return of({
+        exito: false,
+        mensaje: 'No tienes permisos para esta acción'
+      });
+    }
+
+    const userDocRef = doc(this.firestore, 'usuarios', usuarioId);
+
+    return from(getDoc(userDocRef)).pipe(
+      switchMap(async (userDoc) => {
+        if (!userDoc.exists()) {
+          return {
             exito: false,
-            mensaje: 'No tienes permisos para esta acción'
-          });
-          observer.complete();
-          return;
+            mensaje: 'Usuario no encontrado'
+          };
         }
 
-        const index = this.usuarios.findIndex(u => u.id === usuarioId);
-        if (index !== -1 && this.usuarios[index].foto_pendiente) {
-          // Rechazar la foto pendiente
-          this.usuarios[index].estado_foto = 'rechazada';
-          this.usuarios[index].foto_pendiente = undefined;
-          // Restaurar el limite de tiempo para que pueda intentar de nuevo
-          this.usuarios[index].ultima_actualizacion_foto = undefined;
-
-          this.guardarUsuarios();
-
-          // Si el usuario rechazado es el actual, actualizar sesión
-          if (this.usuarioActual$.value?.id === usuarioId) {
-            this.usuarioActual$.next(this.usuarios[index]);
-            this.guardarSesionActual(this.usuarios[index]);
-          }
-
-          observer.next({
-            exito: true,
-            mensaje: motivo ? `❌ Foto rechazada: ${motivo}` : '❌ Foto rechazada'
-          });
-        } else {
-          observer.next({
+        const userData = userDoc.data();
+        if (!userData['foto_pendiente']) {
+          return {
             exito: false,
             mensaje: 'No hay foto pendiente para este usuario'
-          });
+          };
         }
-        observer.complete();
-      }, 500);
-    });
+
+        // Eliminar la foto pendiente de Storage
+        try {
+          const fotoRef = ref(this.storage, userData['foto_pendiente']);
+          await deleteObject(fotoRef);
+        } catch (error) {
+          console.log('Error al eliminar foto de storage (puede ya no existir):', error);
+        }
+
+        // Rechazar la foto
+        await updateDoc(userDocRef, {
+          estado_foto: 'rechazada',
+          foto_pendiente: null,
+          ultima_actualizacion_foto: null // Permitir subir de nuevo
+        });
+
+        // Si el usuario rechazado es el actual, actualizar sesión
+        if (this.usuarioActual$.value?.id === usuarioId) {
+          const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioId);
+          if (usuarioActualizado) {
+            this.usuarioActual$.next(usuarioActualizado);
+          }
+        }
+
+        return {
+          exito: true,
+          mensaje: motivo ? `❌ Foto rechazada: ${motivo}` : '❌ Foto rechazada'
+        };
+      }),
+      catchError(() => of({
+        exito: false,
+        mensaje: 'Error al rechazar la foto'
+      }))
+    );
   }
 
   /**
    * Obtener usuario por ID (solo admin)
    */
-  obtenerUsuarioPorId(id: string): Usuario | undefined {
+  async obtenerUsuarioPorId(id: string): Promise<Usuario | undefined> {
     if (!this.esAdmin()) {
       console.warn('Acceso denegado: Solo administradores pueden ver otros usuarios');
       return undefined;
     }
-    return this.usuarios.find(u => u.id === id);
+
+    return await this.cargarUsuarioDeFirestore(id) || undefined;
   }
 
   /**
    * Eliminar usuario (solo admin)
-   * Elimina el usuario y todos sus datos relacionados
    */
   async eliminarUsuario(usuarioId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Verificar permisos de admin
-      if (!this.esAdmin()) {
-        reject(new Error('Acceso denegado: Solo administradores pueden eliminar usuarios'));
-        return;
-      }
+    if (!this.esAdmin()) {
+      throw new Error('Acceso denegado: Solo administradores pueden eliminar usuarios');
+    }
 
-      // Buscar el usuario a eliminar
-      const usuarioAEliminar = this.usuarios.find(u => u.id === usuarioId);
+    const usuarioAEliminar = await this.cargarUsuarioDeFirestore(usuarioId);
 
-      if (!usuarioAEliminar) {
-        reject(new Error('Usuario no encontrado'));
-        return;
-      }
+    if (!usuarioAEliminar) {
+      throw new Error('Usuario no encontrado');
+    }
 
-      // No permitir eliminar usuarios admin
-      if (usuarioAEliminar.rol === 'admin') {
-        reject(new Error('No se puede eliminar usuarios administradores'));
-        return;
-      }
+    if (usuarioAEliminar.rol === 'admin') {
+      throw new Error('No se puede eliminar usuarios administradores');
+    }
 
-      // No permitir auto-eliminación
-      const usuarioActual = this.usuarioActual$.value;
-      if (usuarioActual?.id === usuarioId) {
-        reject(new Error('No puedes eliminar tu propia cuenta'));
-        return;
-      }
+    const usuarioActual = this.usuarioActual$.value;
+    if (usuarioActual?.id === usuarioId) {
+      throw new Error('No puedes eliminar tu propia cuenta');
+    }
 
-      try {
-        // 1. Eliminar usuario de la lista
-        this.usuarios = this.usuarios.filter(u => u.id !== usuarioId);
-        this.guardarUsuarios();
+    try {
+      // Eliminar usuario de Firestore
+      await deleteDoc(doc(this.firestore, 'usuarios', usuarioId));
 
-        // 2. Limpiar datos relacionados
-        this.limpiarDatosRelacionados(usuarioId);
+      // Limpiar datos relacionados
+      await this.limpiarDatosRelacionados(usuarioId);
 
-        // 3. Si el usuario eliminado está en sesión actual, hacer logout
-        if (usuarioActual?.id === usuarioId) {
-          this.logout();
-        }
-
-        console.log(`✅ Usuario ${usuarioId} eliminado correctamente`);
-        resolve();
-      } catch (error) {
-        console.error('Error al eliminar usuario:', error);
-        reject(new Error('Error al eliminar el usuario'));
-      }
-    });
+      console.log(`✅ Usuario ${usuarioId} eliminado correctamente`);
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      throw new Error('Error al eliminar el usuario');
+    }
   }
 
   /**
    * Limpiar datos relacionados con un usuario eliminado
-   * - Artículos del usuario
-   * - Conversaciones donde participa
-   * - Mensajes enviados/recibidos
    */
   private async limpiarDatosRelacionados(usuarioId: string): Promise<void> {
     try {
-      // Importar dinámicamente los servicios para evitar dependencias circulares
-      const { ArticulosService } = await import('./articulos');
-      const { MensajesService } = await import('./mensajes.service');
+      const batch = writeBatch(this.firestore);
 
-      // Nota: Aquí idealmente inyectarías los servicios, pero para evitar dependencias circulares
-      // trabajamos directamente con localStorage/Preferences
+      // 1. Eliminar artículos del usuario
+      const articulosQuery = query(
+        collection(this.firestore, 'articulos'),
+        where('usuarioId', '==', usuarioId)
+      );
+      const articulosSnapshot = await getDocs(articulosQuery);
+      articulosSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
 
-      // 1. Eliminar artículos del usuario desde Capacitor Preferences
-      const { Preferences } = await import('@capacitor/preferences');
-      const { value: articulosValue } = await Preferences.get({ key: 'articulos_publicados' });
-
-      if (articulosValue) {
-        const articulos = JSON.parse(articulosValue);
-        const articulosFiltrados = articulos.filter((art: any) => art.usuarioId !== usuarioId);
-        await Preferences.set({
-          key: 'articulos_publicados',
-          value: JSON.stringify(articulosFiltrados)
-        });
-        console.log(`✅ Artículos del usuario ${usuarioId} eliminados`);
-      }
-
-      // 2. Eliminar conversaciones donde participa el usuario
-      const conversacionesGuardadas = localStorage.getItem('conversaciones');
-      if (conversacionesGuardadas) {
-        const conversaciones = JSON.parse(conversacionesGuardadas);
-        const conversacionesFiltradas = conversaciones.filter((conv: any) =>
-          !conv.participantes.includes(usuarioId)
-        );
-        localStorage.setItem('conversaciones', JSON.stringify(conversacionesFiltradas));
-        console.log(`✅ Conversaciones del usuario ${usuarioId} eliminadas`);
-      }
+      // 2. Eliminar conversaciones donde participa
+      const conversacionesQuery = query(
+        collection(this.firestore, 'conversaciones'),
+        where('participantes', 'array-contains', usuarioId)
+      );
+      const conversacionesSnapshot = await getDocs(conversacionesQuery);
+      conversacionesSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
 
       // 3. Eliminar mensajes del usuario
-      const mensajesGuardados = localStorage.getItem('mensajes');
-      if (mensajesGuardados) {
-        const mensajes = JSON.parse(mensajesGuardados);
-        const mensajesFiltrados = mensajes.filter((msg: any) =>
-          msg.emisorId !== usuarioId && msg.receptorId !== usuarioId
-        );
-        localStorage.setItem('mensajes', JSON.stringify(mensajesFiltrados));
-        console.log(`✅ Mensajes del usuario ${usuarioId} eliminados`);
-      }
+      const mensajesQuery1 = query(
+        collection(this.firestore, 'mensajes'),
+        where('emisorId', '==', usuarioId)
+      );
+      const mensajesSnapshot1 = await getDocs(mensajesQuery1);
+      mensajesSnapshot1.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
 
+      const mensajesQuery2 = query(
+        collection(this.firestore, 'mensajes'),
+        where('receptorId', '==', usuarioId)
+      );
+      const mensajesSnapshot2 = await getDocs(mensajesQuery2);
+      mensajesSnapshot2.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      // 4. Eliminar transacciones de puntos
+      const transaccionesQuery = query(
+        collection(this.firestore, 'transacciones_puntos'),
+        where('usuarioId', '==', usuarioId)
+      );
+      const transaccionesSnapshot = await getDocs(transaccionesQuery);
+      transaccionesSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      // 5. Eliminar vouchers canjeados
+      const vouchersQuery = query(
+        collection(this.firestore, 'vouchers_canjeados'),
+        where('usuarioId', '==', usuarioId)
+      );
+      const vouchersSnapshot = await getDocs(vouchersQuery);
+      vouchersSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      // Ejecutar todas las eliminaciones
+      await batch.commit();
+
+      console.log(`✅ Datos relacionados del usuario ${usuarioId} eliminados`);
     } catch (error) {
       console.error('Error al limpiar datos relacionados:', error);
-      // No lanzamos error para no bloquear la eliminación del usuario
     }
   }
 
   /**
    * Contar artículos de un usuario
-   * Útil para mostrar advertencias antes de eliminar
    */
   async contarArticulosUsuario(usuarioId: string): Promise<number> {
     try {
-      const { Preferences } = await import('@capacitor/preferences');
-      const { value } = await Preferences.get({ key: 'articulos_publicados' });
-
-      if (value) {
-        const articulos = JSON.parse(value);
-        return articulos.filter((art: any) => art.usuarioId === usuarioId).length;
-      }
-      return 0;
+      const articulosQuery = query(
+        collection(this.firestore, 'articulos'),
+        where('usuarioId', '==', usuarioId)
+      );
+      const snapshot = await getDocs(articulosQuery);
+      return snapshot.size;
     } catch (error) {
       console.error('Error al contar artículos:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Generar token de sesión único
+   */
+  private generarTokenSesion(): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    return `${timestamp}-${random}`;
+  }
+
+  /**
+   * Iniciar listener para detectar sesión dual
+   */
+  private iniciarListenerSesionDual(userId: string) {
+    console.log(`👀 Iniciando listener de sesión dual para usuario ${userId}...`);
+
+    // Detener listener anterior si existe
+    if (this.sesionListener) {
+      this.sesionListener();
+      this.sesionListener = null;
+    }
+
+    const userDocRef = doc(this.firestore, 'usuarios', userId);
+
+    this.sesionListener = onSnapshot(userDocRef, (docSnapshot) => {
+      if (!docSnapshot.exists()) return;
+
+      const data = docSnapshot.data();
+      const sesionActivaFirestore = data['sesion_activa'];
+
+      // Verificar si el token de sesión cambió
+      if (sesionActivaFirestore && sesionActivaFirestore !== this.sesionTokenLocal) {
+        console.log('🚨 SESIÓN DUAL DETECTADA');
+        console.log(`   Token local: ${this.sesionTokenLocal.substring(0, 10)}...`);
+        console.log(`   Token Firestore: ${sesionActivaFirestore.substring(0, 10)}...`);
+
+        this.ngZone.run(() => {
+          this.sesionDualDetectada$.next(true);
+        });
+      }
+    }, (error) => {
+      console.error('❌ Error en listener de sesión dual:', error);
+    });
+  }
+
+  /**
+   * Detener listener de sesión dual
+   */
+  private detenerListenerSesionDual() {
+    if (this.sesionListener) {
+      console.log('🛑 Deteniendo listener de sesión dual...');
+      this.sesionListener();
+      this.sesionListener = null;
+    }
+  }
+
+  /**
+   * Obtener observable de sesión dual detectada
+   */
+  getSesionDualDetectada(): Observable<boolean> {
+    return this.sesionDualDetectada$.asObservable();
+  }
+
+  /**
+   * Actualizar calificación promedio de un usuario
+   */
+  async actualizarCalificacionUsuario(usuarioId: string, calificacion: number): Promise<void> {
+    try {
+      const userDocRef = doc(this.firestore, 'usuarios', usuarioId);
+      await updateDoc(userDocRef, {
+        calificacion: Number(calificacion.toFixed(1))
+      });
+      console.log(`✅ Calificación de usuario ${usuarioId} actualizada a ${calificacion.toFixed(1)}`);
+    } catch (error) {
+      console.error('Error al actualizar calificación:', error);
+      throw error;
     }
   }
 }

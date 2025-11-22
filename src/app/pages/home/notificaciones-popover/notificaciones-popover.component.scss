@@ -1,0 +1,128 @@
+.notificaciones-content {
+  --background: var(--ion-background-color, #fff);
+  width: 90vw;
+  max-width: 400px;
+  max-height: 70vh;
+}
+
+.notificaciones-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--ion-color-light);
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  ion-buttons {
+    display: flex;
+    gap: 4px;
+  }
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ion-color-medium);
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+  }
+}
+
+ion-list {
+  background: transparent;
+  padding: 0;
+}
+
+ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --min-height: auto;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    --background: var(--ion-color-light);
+  }
+
+  &.no-leida {
+    --background: rgba(var(--ion-color-primary-rgb), 0.05);
+    border-left: 3px solid var(--ion-color-primary);
+
+    ion-label h3 {
+      font-weight: 600;
+    }
+  }
+
+  ion-icon[slot="start"] {
+    font-size: 24px;
+    margin-right: 12px;
+  }
+
+  ion-label {
+    margin: 12px 0;
+
+    h3 {
+      font-size: 15px;
+      font-weight: 500;
+      margin: 0 0 4px 0;
+      color: var(--ion-text-color);
+    }
+
+    p {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+      margin: 0;
+      white-space: normal;
+      line-height: 1.4;
+    }
+
+    .fecha {
+      font-size: 11px;
+      margin-top: 4px;
+      opacity: 0.7;
+    }
+
+    .motivo-rechazo {
+      margin-top: 8px;
+      padding: 8px;
+      background: rgba(var(--ion-color-danger-rgb), 0.1);
+      border-left: 3px solid var(--ion-color-danger);
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--ion-color-danger);
+
+      strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+    }
+  }
+
+  ion-button[slot="end"] {
+    margin: 0;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}

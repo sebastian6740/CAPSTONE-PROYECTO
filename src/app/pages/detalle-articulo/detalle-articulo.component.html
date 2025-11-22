@@ -48,7 +48,7 @@
 
       <div class="articulo-fecha">
         <ion-icon name="calendar-outline"></ion-icon>
-        <span>Publicado el {{ articulo.fechaPublicacion | date:'dd/MM/yyyy' }}</span>
+        <span>Publicado el {{ articulo.fechaPublicacion | firebaseDate | date:'dd/MM/yyyy' }}</span>
       </div>
     </div>
 
@@ -56,7 +56,7 @@
     <div class="propietario-info" *ngIf="propietario">
       <h3>Publicado por</h3>
 
-      <div class="propietario-card">
+      <div class="propietario-card" (click)="verPerfilUsuario()">
         <div class="propietario-avatar">
           <img *ngIf="propietario.foto" [src]="propietario.foto" alt="Foto de perfil">
           <div *ngIf="!propietario.foto" class="avatar-placeholder">
@@ -93,6 +93,8 @@
             {{ propietario.biografia }}
           </p>
         </div>
+
+        <ion-icon name="chevron-forward" class="ver-perfil-icon"></ion-icon>
       </div>
     </div>
 

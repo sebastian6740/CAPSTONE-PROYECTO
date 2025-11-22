@@ -44,29 +44,52 @@ mostrarConfirmarContrasena = false;
     }
 
     this.cargando = true;
+    console.log('🚀 Iniciando proceso de registro...');
+
     this.authService.registrar(this.formularioRegistro.value).subscribe({
       next: (resultado) => {
         this.cargando = false;
+        console.log('📬 Resultado del registro:', resultado);
+
         if (resultado.exito) {
-          this.mostrarMensaje(resultado.mensaje, 'success');
+          console.log('✅ Registro exitoso, redirigiendo al home...');
+          this.mostrarMensaje('¡Registro exitoso! Bienvenido', 'success');
           setTimeout(() => {
-            this.router.navigate(['/tabs/tab1']);
+            this.router.navigate(['/home']);
           }, 1500);
         } else {
+          console.error('❌ Registro falló:', resultado.mensaje);
+          // Mostrar mensaje principal
           this.mostrarMensaje(resultado.mensaje, 'danger');
+
+          // Si hay detalle de error, mostrarlo en consola y opcionalmente en un segundo mensaje
+          if ((resultado as any).detalleError) {
+            console.error('📋 Detalle del error:', (resultado as any).detalleError);
+
+            // Si el error es de configuración, mostrar mensaje adicional
+            if ((resultado as any).detalleError.includes('Firestore') || (resultado as any).detalleError.includes('CONFIGURAR')) {
+              setTimeout(() => {
+                this.mostrarMensaje('⚠️ ' + (resultado as any).detalleError, 'warning', 5000);
+              }, 2500);
+            }
+          }
         }
       },
-      error: () => {
+      error: (error) => {
         this.cargando = false;
-        this.mostrarMensaje('Error en el registro', 'danger');
+        console.error('💥 Error crítico en el registro:', error);
+        this.mostrarMensaje('Error crítico al registrar. Revisa la consola para más detalles.', 'danger');
+      },
+      complete: () => {
+        console.log('🏁 Proceso de registro finalizado');
       }
     });
   }
 
-  private async mostrarMensaje(mensaje: string, color: string) {
+  private async mostrarMensaje(mensaje: string, color: string, duracion: number = 2000) {
     const toast = await this.toastController.create({
       message: mensaje,
-      duration: 2000,
+      duration: duracion,
       color: color,
       position: 'bottom'
     });

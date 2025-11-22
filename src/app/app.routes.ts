@@ -59,6 +59,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/mis-trueques/mis-trueques.component').then(m => m.MisTruequesComponent)
   },
   {
+    path: 'perfil-publico/:id',
+    loadComponent: () => import('./pages/perfil-publico/perfil-publico.component').then(m => m.PerfilPublicoComponent)
+  },
+  {
     path: '**',
     redirectTo: 'login'
   }

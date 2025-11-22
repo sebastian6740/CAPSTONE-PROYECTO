@@ -1,0 +1,284 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Perfil de Usuario</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div *ngIf="usuario" class="perfil-container">
+
+    <!-- Información del Usuario -->
+    <div class="usuario-header">
+      <div class="avatar-container">
+        <img [src]="obtenerFotoUsuario()" alt="Foto de perfil" class="avatar-img">
+      </div>
+
+      <h1 class="usuario-nombre">
+        {{ usuario.nombre }}
+        <ion-badge *ngIf="usuario.verificado" color="success" class="badge-verificado">
+          <ion-icon name="checkmark-circle"></ion-icon>
+        </ion-badge>
+      </h1>
+
+      <div class="usuario-ubicacion">
+        <ion-icon name="location"></ion-icon>
+        <span>{{ usuario.ciudad }}</span>
+      </div>
+
+      <p *ngIf="usuario.biografia" class="usuario-bio">
+        {{ usuario.biografia }}
+      </p>
+    </div>
+
+    <!-- Calificación Destacada con Estrellas Grandes -->
+    <div class="calificacion-destacada">
+      <div class="calificacion-principal">
+        <div class="numero-calificacion">
+          {{ estadisticas?.promedioCalificacion?.toFixed(1) || '0.0' }}
+          <span>/5</span>
+        </div>
+        <div class="estrellas-grandes">
+          <ion-icon
+            *ngFor="let i of [1,2,3,4,5]"
+            [name]="i <= (estadisticas?.promedioCalificacion || 0) ? 'star' : 'star-outline'"
+            [style.color]="i <= (estadisticas?.promedioCalificacion || 0) ? '#FFA000' : '#ddd'">
+          </ion-icon>
+        </div>
+        <p class="total-resenas">
+          Basado en {{ estadisticas?.totalComentarios || 0 }} {{ estadisticas?.totalComentarios === 1 ? 'reseña' : 'reseñas' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <ion-icon name="swap-horizontal"></ion-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ usuario.trueques_realizados }}</span>
+          <span class="stat-label">Trueques</span>
+        </div>
+      </div>
+
+      <div class="stat-box">
+        <ion-icon name="trophy"></ion-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ usuario.recompensas || 0 }}</span>
+          <span class="stat-label">Puntos</span>
+        </div>
+      </div>
+
+      <div class="stat-box">
+        <ion-icon name="chatbox"></ion-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ estadisticas?.totalComentarios || 0 }}</span>
+          <span class="stat-label">Reseñas</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribución de Calificaciones -->
+    <div class="calificaciones-distribucion" *ngIf="estadisticas && estadisticas.totalComentarios > 0">
+      <h2>
+        <ion-icon name="bar-chart"></ion-icon>
+        Distribución de calificaciones
+      </h2>
+
+      <div class="barra-calificacion">
+        <span class="estrella-label">5 ★</span>
+        <div class="barra-progreso">
+          <div class="barra-fill" [style.width.%]="obtenerPorcentajeEstrellas(estadisticas.estrellas5)"></div>
+        </div>
+        <span class="cantidad">{{ estadisticas.estrellas5 }}</span>
+      </div>
+
+      <div class="barra-calificacion">
+        <span class="estrella-label">4 ★</span>
+        <div class="barra-progreso">
+          <div class="barra-fill" [style.width.%]="obtenerPorcentajeEstrellas(estadisticas.estrellas4)"></div>
+        </div>
+        <span class="cantidad">{{ estadisticas.estrellas4 }}</span>
+      </div>
+
+      <div class="barra-calificacion">
+        <span class="estrella-label">3 ★</span>
+        <div class="barra-progreso">
+          <div class="barra-fill" [style.width.%]="obtenerPorcentajeEstrellas(estadisticas.estrellas3)"></div>
+        </div>
+        <span class="cantidad">{{ estadisticas.estrellas3 }}</span>
+      </div>
+
+      <div class="barra-calificacion">
+        <span class="estrella-label">2 ★</span>
+        <div class="barra-progreso">
+          <div class="barra-fill" [style.width.%]="obtenerPorcentajeEstrellas(estadisticas.estrellas2)"></div>
+        </div>
+        <span class="cantidad">{{ estadisticas.estrellas2 }}</span>
+      </div>
+
+      <div class="barra-calificacion">
+        <span class="estrella-label">1 ★</span>
+        <div class="barra-progreso">
+          <div class="barra-fill" [style.width.%]="obtenerPorcentajeEstrellas(estadisticas.estrellas1)"></div>
+        </div>
+        <span class="cantidad">{{ estadisticas.estrellas1 }}</span>
+      </div>
+    </div>
+
+    <!-- Botón para calificar -->
+    <div class="calificar-container" *ngIf="!esMiPerfil">
+      <ion-button
+        *ngIf="!mostrandoFormulario && !yaCalificoUsuario"
+        expand="block"
+        color="primary"
+        (click)="toggleFormulario()">
+        <ion-icon name="star" slot="start"></ion-icon>
+        Calificar usuario
+      </ion-button>
+
+      <ion-chip *ngIf="yaCalificoUsuario" color="success">
+        <ion-icon name="checkmark-circle"></ion-icon>
+        <ion-label>Ya calificaste a este usuario</ion-label>
+      </ion-chip>
+    </div>
+
+    <!-- Formulario de Calificación -->
+    <ion-card *ngIf="mostrandoFormulario" class="formulario-calificacion">
+      <ion-card-header>
+        <ion-card-title>Califica a {{ usuario.nombre }}</ion-card-title>
+      </ion-card-header>
+
+      <ion-card-content>
+        <form [formGroup]="formularioComentario">
+          <!-- Selector de estrellas -->
+          <div class="selector-estrellas">
+            <label>Calificación:</label>
+            <div class="estrellas-input">
+              <span
+                class="estrella-unicode"
+                [style.color]="obtenerColorEstrella(1)"
+                (click)="seleccionarCalificacion(1)">
+                ★
+              </span>
+              <span
+                class="estrella-unicode"
+                [style.color]="obtenerColorEstrella(2)"
+                (click)="seleccionarCalificacion(2)">
+                ★
+              </span>
+              <span
+                class="estrella-unicode"
+                [style.color]="obtenerColorEstrella(3)"
+                (click)="seleccionarCalificacion(3)">
+                ★
+              </span>
+              <span
+                class="estrella-unicode"
+                [style.color]="obtenerColorEstrella(4)"
+                (click)="seleccionarCalificacion(4)">
+                ★
+              </span>
+              <span
+                class="estrella-unicode"
+                [style.color]="obtenerColorEstrella(5)"
+                (click)="seleccionarCalificacion(5)">
+                ★
+              </span>
+            </div>
+          </div>
+
+          <!-- Comentario -->
+          <ion-item lines="none">
+            <ion-label position="stacked">Comentario (mínimo 10 caracteres)</ion-label>
+            <ion-textarea
+              formControlName="comentario"
+              rows="4"
+              placeholder="Comparte tu experiencia con este usuario..."
+              maxlength="500">
+            </ion-textarea>
+          </ion-item>
+
+          <div class="contador-caracteres">
+            {{ formularioComentario.value.comentario?.length || 0 }}/500
+          </div>
+
+          <!-- Botones -->
+          <div class="form-buttons">
+            <ion-button
+              expand="block"
+              color="medium"
+              fill="outline"
+              (click)="toggleFormulario()">
+              Cancelar
+            </ion-button>
+
+            <ion-button
+              expand="block"
+              color="primary"
+              (click)="enviarComentario()"
+              [disabled]="formularioComentario.invalid || cargando">
+              <ion-spinner *ngIf="cargando" name="crescent" class="spinner-btn"></ion-spinner>
+              <span *ngIf="!cargando">Publicar</span>
+            </ion-button>
+          </div>
+        </form>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Lista de Comentarios -->
+    <div class="comentarios-section">
+      <h2>
+        Comentarios
+        <ion-badge color="primary">{{ comentarios.length }}</ion-badge>
+      </h2>
+
+      <div *ngIf="comentarios.length === 0" class="sin-comentarios">
+        <ion-icon name="chatbox-outline" class="icono-vacio"></ion-icon>
+        <p>Aún no hay comentarios</p>
+      </div>
+
+      <div *ngIf="comentarios.length > 0" class="comentarios-lista">
+        <ion-card *ngFor="let comentario of comentarios" class="comentario-card">
+          <ion-card-content>
+            <div class="comentario-header">
+              <div class="comentario-usuario">
+                <img
+                  [src]="comentario.foto || fotoDefault"
+                  alt="Foto de {{ comentario.nombre }}"
+                  class="comentario-avatar">
+                <div class="comentario-info">
+                  <h4>{{ comentario.nombre }}</h4>
+                  <div class="comentario-estrellas">
+                    <ion-icon
+                      *ngFor="let _ of obtenerEstrellasComentario(comentario.calificacion)"
+                      name="star"
+                      style="color: #FFA000;"
+                      class="estrella-small">
+                    </ion-icon>
+                  </div>
+                </div>
+              </div>
+
+              <span class="comentario-fecha">{{ formatearFecha(comentario.fecha) }}</span>
+            </div>
+
+            <p class="comentario-texto">{{ comentario.comentario }}</p>
+          </ion-card-content>
+        </ion-card>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Estado de carga -->
+  <div *ngIf="!usuario" class="loading-state">
+    <ion-spinner></ion-spinner>
+    <p>Cargando perfil...</p>
+  </div>
+
+</ion-content>

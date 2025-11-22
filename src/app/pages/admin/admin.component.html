@@ -61,11 +61,24 @@
         <span class="stat-label">Nuevos (7d)</span>
       </div>
     </div>
+
+    <div class="stat-card warning">
+      <ion-icon name="time" class="stat-icon"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-number">{{ estadisticas.articulosPendientes }}</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+    </div>
   </div>
 
   <!-- Tabs de navegación -->
   <div class="tabs-container">
     <ion-segment [value]="vistaActiva" (ionChange)="cambiarVista($event.detail.value)">
+      <ion-segment-button value="pendientes">
+        <ion-icon name="time"></ion-icon>
+        <ion-label>Pendientes</ion-label>
+        <ion-badge *ngIf="estadisticas.articulosPendientes > 0" color="warning">{{ estadisticas.articulosPendientes }}</ion-badge>
+      </ion-segment-button>
       <ion-segment-button value="articulos">
         <ion-icon name="cube"></ion-icon>
         <ion-label>Artículos</ion-label>
@@ -80,6 +93,66 @@
         <ion-badge *ngIf="fotosPendientes.length > 0" color="warning">{{ fotosPendientes.length }}</ion-badge>
       </ion-segment-button>
     </ion-segment>
+  </div>
+
+  <!-- Vista de Artículos Pendientes de Aprobación -->
+  <div *ngIf="vistaActiva === 'pendientes'" class="content-section">
+    <h3 class="section-title">
+      Artículos Pendientes de Aprobación
+      <ion-badge *ngIf="estadisticas.articulosPendientes > 0" color="warning">{{ estadisticas.articulosPendientes }}</ion-badge>
+    </h3>
+
+    <div *ngIf="getArticulosPendientes().length === 0" class="empty-state">
+      <ion-icon name="checkmark-done-circle"></ion-icon>
+      <p>¡Excelente! No hay artículos pendientes de aprobación</p>
+    </div>
+
+    <div *ngFor="let articulo of getArticulosPendientes()" class="admin-card pending-card">
+      <div class="card-header">
+        <div class="card-image">
+          <img *ngIf="articulo.fotos && articulo.fotos.length > 0" [src]="articulo.fotos[0]" alt="Foto del artículo">
+          <div *ngIf="!articulo.fotos || articulo.fotos.length === 0" class="no-image">
+            <ion-icon name="image-outline"></ion-icon>
+          </div>
+          <ion-badge class="status-badge" color="warning">
+            <ion-icon name="time-outline"></ion-icon>
+            PENDIENTE
+          </ion-badge>
+        </div>
+        <div class="card-info">
+          <h4>{{ articulo.nombre }}</h4>
+          <p class="usuario-info">
+            <ion-icon name="person"></ion-icon>
+            {{ obtenerNombreUsuario(articulo.usuarioId || '') }}
+          </p>
+          <p class="categoria-badge">{{ articulo.categoria }}</p>
+          <p class="fecha-info">
+            <ion-icon name="calendar-outline"></ion-icon>
+            Publicado: {{ articulo.fechaPublicacion | firebaseDate | date:'dd/MM/yyyy HH:mm' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="card-description">
+        <p>{{ articulo.descripcion }}</p>
+      </div>
+
+      <!-- Galería de fotos si hay más de una -->
+      <div *ngIf="articulo.fotos && articulo.fotos.length > 1" class="fotos-gallery">
+        <img *ngFor="let foto of articulo.fotos" [src]="foto" alt="Foto adicional">
+      </div>
+
+      <div class="card-actions approval-actions">
+        <ion-button expand="block" color="success" (click)="aprobarArticulo(articulo)" [disabled]="procesando">
+          <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+          Aprobar Artículo
+        </ion-button>
+        <ion-button expand="block" color="danger" fill="outline" (click)="rechazarArticulo(articulo)" [disabled]="procesando">
+          <ion-icon name="close-circle" slot="start"></ion-icon>
+          Rechazar y Eliminar
+        </ion-button>
+      </div>
+    </div>
   </div>
 
   <!-- Vista de Artículos -->

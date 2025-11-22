@@ -24,6 +24,8 @@ export interface Usuario {
   ultima_actualizacion_foto?: Date;
   ultima_actualizacion_perfil: Date;
   rol?: 'user' | 'admin'; // Rol del usuario (opcional para compatibilidad con usuarios existentes)
+  sesion_activa?: string; // Token de sesión activa (detectar inicio dual)
+  ultima_actividad?: Date; // Última actividad del usuario
 }
 
 /**

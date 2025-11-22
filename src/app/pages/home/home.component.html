@@ -15,6 +15,19 @@
           <p>Intercambia lo que quieras</p>
         </div>
 
+        <!-- Botón de notificaciones -->
+        <ion-buttons slot="end" class="notificaciones-buttons">
+          <ion-button class="notificaciones-btn" (click)="abrirNotificaciones($event)">
+            <ion-icon slot="icon-only" name="notifications-outline"></ion-icon>
+            <ion-badge
+              *ngIf="notificacionesNoLeidas > 0"
+              color="danger"
+              class="notificaciones-badge">
+              {{ notificacionesNoLeidas > 9 ? '9+' : notificacionesNoLeidas }}
+            </ion-badge>
+          </ion-button>
+        </ion-buttons>
+
         <!-- Widget de Puntos -->
         <div class="puntos-widget" (click)="irARecompensas()">
           <div class="puntos-contenido">
@@ -102,8 +115,8 @@
     </div>
   </div>
 
-  <!-- Sección de búsqueda -->
-  <div class="buscar-ideal">
+  <!-- Sección de búsqueda (solo para usuarios no admin) -->
+  <div class="buscar-ideal" *ngIf="!esAdmin()">
     <h3>Buscar cambio ideal</h3>
     <p>No encontraste lo que buscas? Publica tu artículo</p>
     <ion-button expand="block" color="gray" (click)="irACrearTrueque()">

@@ -45,7 +45,7 @@
         <p class="descripcion">{{ articulo.descripcion }}</p>
         <div class="fecha">
           <ion-icon name="calendar-outline"></ion-icon>
-          <span>{{ articulo.fechaPublicacion | date:'dd/MM/yyyy' }}</span>
+          <span>{{ articulo.fechaPublicacion | firebaseDate | date:'dd/MM/yyyy' }}</span>
         </div>
       </div>
 

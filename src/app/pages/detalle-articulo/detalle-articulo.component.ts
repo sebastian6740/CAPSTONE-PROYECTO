@@ -6,6 +6,7 @@ import { ArticulosService, Articulo } from '../../core/services/articulos';
 import { AuthService } from '../../core/services/auth.service';
 import { MensajesService } from '../../core/services/mensajes.service';
 import { Usuario } from '../../core/models/user.model';
+import { FirebaseDatePipe } from '../../core/pipes/firebase-date.pipe';
 import { register } from 'swiper/element/bundle';
 
 register();
@@ -15,7 +16,7 @@ register();
   standalone: true,
   templateUrl: './detalle-articulo.component.html',
   styleUrls: ['./detalle-articulo.component.scss'],
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, FirebaseDatePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class DetalleArticuloComponent implements OnInit {
@@ -47,7 +48,7 @@ export class DetalleArticuloComponent implements OnInit {
 
   cargarArticulo(id: string) {
     // Obtener todos los artículos y encontrar el específico
-    this.articulosService.articulos$.subscribe(articulos => {
+    this.articulosService.articulos$.subscribe(async articulos => {
       this.articulo = articulos.find(art => art.id === id);
 
       if (this.articulo) {
@@ -56,14 +57,14 @@ export class DetalleArticuloComponent implements OnInit {
 
         // Cargar información del propietario
         if (this.articulo.usuarioId) {
-          const usuarios = this.authService.obtenerTodosUsuarios();
-          this.propietario = usuarios.find(u => u.id === this.articulo?.usuarioId);
+          const usuarios = await this.authService.obtenerTodosUsuarios();
+          this.propietario = usuarios.find((u: Usuario) => u.id === this.articulo?.usuarioId);
         }
       }
     });
   }
 
-  contactarPropietario() {
+  async contactarPropietario() {
     if (!this.articulo || !this.articulo.usuarioId) {
       console.error('No se puede contactar: artículo sin propietario');
       return;
@@ -76,7 +77,7 @@ export class DetalleArticuloComponent implements OnInit {
 
     try {
       // Crear o obtener conversación con contexto del artículo
-      const conversacion = this.mensajesService.obtenerOCrearConversacion(
+      const conversacion = await this.mensajesService.obtenerOCrearConversacion(
         this.articulo.usuarioId,
         {
           id: this.articulo.id || '',
@@ -89,6 +90,13 @@ export class DetalleArticuloComponent implements OnInit {
       this.router.navigate(['/chat', conversacion.id]);
     } catch (error) {
       console.error('Error al crear conversación:', error);
+    }
+  }
+
+  verPerfilUsuario() {
+    if (this.propietario) {
+      // Navegar al componente de perfil público del usuario
+      this.router.navigate(['/perfil-publico', this.propietario.id]);
     }
   }
 

@@ -129,6 +129,32 @@ ion-content {
   .propietario-card {
     display: flex;
     gap: 16px;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+
+    &:hover {
+      background: #e9ecef;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    .ver-perfil-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+      color: #999;
+    }
 
     .propietario-avatar {
       flex-shrink: 0;

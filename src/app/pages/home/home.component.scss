@@ -22,28 +22,29 @@ ion-content {
 
 .contenido{
   --background: linear-gradient(180deg, #4169E1 0%, #6B8FF2 100%);
-  padding-bottom: 16px;
+  padding-bottom: 12px;
+  padding-top: 8px;
 }
 
 
 
 .header-title h1 {
   margin: 0;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 700;
   font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
   color: white;
   display: flex;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 8px;
+  margin-bottom: 6px;
   justify-content: center;
-  
+
 }
 
 .header-title p {
   margin: 0;
-  font-size: 15px;
-  color: #666;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
   text-align: center;
 }
 
@@ -259,18 +260,17 @@ ion-button {
 } 
 
 .logo-container {
-  text-align: center; /* Centrar el contenido */
+  text-align: center;
   justify-content: center;
 }
 
 .logo-img {
-  width: 100px; /* Ajusta el tamaño del logo */
-  height: auto; /* Mantén la proporción de la imagen */
-  margin-top: 10px; /* Espaciado superior */
+  width: 70px;
+  height: auto;
+  margin: 6px auto 4px;
   align-items: center;
   justify-content: center;
   display: flex;
-  margin: 0 auto; /* Centrar horizontalmente */
 }
 
 // Mensaje sin artículos
@@ -390,6 +390,85 @@ ion-button {
   to {
     transform: scale(15) rotate(720deg) translate(-50%, -50%);
     opacity: 0;
+  }
+}
+
+// Botón de notificaciones
+.notificaciones-buttons {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+}
+
+.notificaciones-btn {
+  --color: white;
+  --ripple-color: rgba(255, 255, 255, 0.2);
+  --border-radius: 50%;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  width: 44px;
+  height: 44px;
+  position: relative;
+  margin: 0;
+
+  // Efecto glassmorphism
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.3));
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  ion-icon {
+    font-size: 22px;
+    color: white !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  }
+
+  .notificaciones-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    animation: pulse 2s infinite;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 3px rgba(255, 255, 255, 0.3);
+    border: 2px solid white;
+    background: linear-gradient(135deg, #ff4757, #ff6b81);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
   }
 }
 

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -37,7 +37,8 @@ export class PublicarArticuloComponent implements OnInit {
   constructor(
     private router: Router,
     private actionSheetController: ActionSheetController,
-    private articulosService: ArticulosService
+    private articulosService: ArticulosService,
+    private alertController: AlertController
   ) { }
 
   ngOnInit() {
@@ -163,14 +164,30 @@ export class PublicarArticuloComponent implements OnInit {
         // Limpiar el borrador
         await this.limpiarStorage();
 
-        // Mostrar mensaje de éxito
-        alert('¡Artículo publicado exitosamente!');
-
-        // Volver al home
-        this.router.navigate(['/home']);
+        // Mostrar mensaje de éxito con información de revisión
+        const alert = await this.alertController.create({
+          header: '¡Artículo publicado!',
+          message: 'Tu artículo ha sido publicado exitosamente y está siendo revisado por nuestro equipo de administración. Recibirás una notificación cuando sea aprobado.',
+          buttons: [
+            {
+              text: 'Entendido',
+              handler: () => {
+                // Volver al home
+                this.router.navigate(['/home']);
+              }
+            }
+          ],
+          backdropDismiss: false
+        });
+        await alert.present();
       } catch (error) {
         console.error('Error al publicar artículo:', error);
-        alert('Error al publicar el artículo. Por favor intenta de nuevo.');
+        const alertError = await this.alertController.create({
+          header: 'Error',
+          message: 'Error al publicar el artículo. Por favor intenta de nuevo.',
+          buttons: ['OK']
+        });
+        await alertError.present();
       }
     }
   }

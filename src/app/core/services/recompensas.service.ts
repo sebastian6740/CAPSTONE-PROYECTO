@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { Firestore, collection, collectionData, addDoc, doc, updateDoc, serverTimestamp, query, where, orderBy, Timestamp, getDocs } from '@angular/fire/firestore';
 import {
   TransaccionPuntos,
   Voucher,
@@ -14,9 +15,9 @@ import { AuthService } from './auth.service';
 })
 export class RecompensasService {
 
-  // Storage keys
-  private readonly TRANSACCIONES_KEY = 'transacciones_puntos';
-  private readonly VOUCHERS_CANJEADOS_KEY = 'vouchers_canjeados';
+  // Cache local de transacciones y vouchers
+  private transaccionesCache: TransaccionPuntos[] = [];
+  private vouchersCanjeadosCache: VoucherCanjeado[] = [];
 
   // Reglas de puntos
   private reglasPuntos: ReglasPuntos = {
@@ -179,7 +180,11 @@ export class RecompensasService {
   private puntosActualizados = new BehaviorSubject<number>(0);
   public puntosActualizados$ = this.puntosActualizados.asObservable();
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private firestore: Firestore,
+    private authService: AuthService,
+    private ngZone: NgZone
+  ) {
     this.inicializarPuntos();
   }
 
@@ -191,6 +196,58 @@ export class RecompensasService {
     const usuario = this.authService.getUsuarioActualSync();
     if (usuario) {
       this.puntosActualizados.next(usuario.recompensas || 0);
+      this.cargarDatosDeFirestore();
+    }
+  }
+
+  // Cargar transacciones y vouchers desde Firestore
+  private async cargarDatosDeFirestore() {
+    const usuario = this.authService.getUsuarioActualSync();
+    if (!usuario) return;
+
+    console.log('🎁 Cargando datos de recompensas desde Firestore...');
+
+    try {
+      // Cargar transacciones
+      const transaccionesCollection = collection(this.firestore, 'transacciones');
+      const transaccionesQuery = query(
+        transaccionesCollection,
+        where('usuarioId', '==', usuario.id),
+        orderBy('fecha', 'desc')
+      );
+
+      const transaccionesSnapshot = await getDocs(transaccionesQuery);
+      this.transaccionesCache = transaccionesSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        fecha: doc.data()['fecha'] instanceof Timestamp ? doc.data()['fecha'].toDate() : doc.data()['fecha']
+      } as TransaccionPuntos));
+
+      console.log(`✅ ${this.transaccionesCache.length} transacciones cargadas`);
+
+      // Cargar vouchers canjeados
+      const vouchersCollection = collection(this.firestore, 'vouchers_canjeados');
+      const vouchersQuery = query(
+        vouchersCollection,
+        where('usuarioId', '==', usuario.id),
+        orderBy('fechaCanje', 'desc')
+      );
+
+      const vouchersSnapshot = await getDocs(vouchersQuery);
+      this.vouchersCanjeadosCache = vouchersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          fechaCanje: data['fechaCanje'] instanceof Timestamp ? data['fechaCanje'].toDate() : data['fechaCanje'],
+          fechaExpiracion: data['fechaExpiracion'] instanceof Timestamp ? data['fechaExpiracion'].toDate() : data['fechaExpiracion'],
+          fechaUso: data['fechaUso'] instanceof Timestamp ? data['fechaUso'].toDate() : data['fechaUso']
+        } as VoucherCanjeado;
+      });
+
+      console.log(`✅ ${this.vouchersCanjeadosCache.length} vouchers canjeados cargados`);
+    } catch (error) {
+      console.error('❌ Error al cargar datos de recompensas:', error);
     }
   }
 
@@ -209,30 +266,31 @@ export class RecompensasService {
   /**
    * Agrega puntos al usuario y registra la transacción
    */
-  agregarPuntos(cantidad: number, motivo: string, articuloId?: string): void {
+  async agregarPuntos(cantidad: number, motivo: string, articuloId?: string): Promise<void> {
     const usuario = this.authService.getUsuarioActualSync();
     if (!usuario) return;
 
     const saldoAnterior = usuario.recompensas || 0;
     const saldoNuevo = saldoAnterior + cantidad;
 
-    // Actualizar puntos en el usuario
-    this.authService.agregarRecompensa(cantidad);
+    console.log(`🎁 Agregando ${cantidad} puntos: ${motivo}`);
 
-    // Registrar transacción
-    const transaccion: TransaccionPuntos = {
-      id: this.generarId(),
+    // Actualizar puntos en el usuario
+    await this.authService.agregarRecompensa(cantidad);
+
+    // Registrar transacción en Firestore
+    const transaccion: any = {
       usuarioId: usuario.id,
       tipo: 'ganado',
       cantidad,
       motivo,
-      articuloRelacionado: articuloId,
-      fecha: new Date(),
+      articuloRelacionado: articuloId || null,
+      fecha: serverTimestamp(),
       saldoAnterior,
       saldoNuevo
     };
 
-    this.guardarTransaccion(transaccion);
+    await this.guardarTransaccionFirestore(transaccion);
 
     // Notificar cambio
     this.puntosActualizados.next(saldoNuevo);
@@ -241,7 +299,7 @@ export class RecompensasService {
   /**
    * Gasta puntos del usuario y registra la transacción
    */
-  gastarPuntos(cantidad: number, motivo: string, voucherId?: string): boolean {
+  async gastarPuntos(cantidad: number, motivo: string, voucherId?: string): Promise<boolean> {
     const usuario = this.authService.getUsuarioActualSync();
     if (!usuario) return false;
 
@@ -254,23 +312,24 @@ export class RecompensasService {
 
     const saldoNuevo = saldoAnterior - cantidad;
 
-    // Actualizar puntos en el usuario
-    this.authService.agregarRecompensa(-cantidad);
+    console.log(`💸 Gastando ${cantidad} puntos: ${motivo}`);
 
-    // Registrar transacción
-    const transaccion: TransaccionPuntos = {
-      id: this.generarId(),
+    // Actualizar puntos en el usuario
+    await this.authService.agregarRecompensa(-cantidad);
+
+    // Registrar transacción en Firestore
+    const transaccion: any = {
       usuarioId: usuario.id,
       tipo: 'gastado',
       cantidad,
       motivo,
-      voucherRelacionado: voucherId,
-      fecha: new Date(),
+      voucherRelacionado: voucherId || null,
+      fecha: serverTimestamp(),
       saldoAnterior,
       saldoNuevo
     };
 
-    this.guardarTransaccion(transaccion);
+    await this.guardarTransaccionFirestore(transaccion);
 
     // Notificar cambio
     this.puntosActualizados.next(saldoNuevo);
@@ -311,9 +370,9 @@ export class RecompensasService {
    * Otorga bono de registro a nuevo usuario
    */
   otorgarBonoRegistro(usuarioId: string): void {
-    const transacciones = this.obtenerTransacciones();
+    const transacciones = this.transaccionesCache;
     const yaRecibioBonus = transacciones.some(
-      t => t.usuarioId === usuarioId && t.motivo.includes('Bono de bienvenida')
+      (t: TransaccionPuntos) => t.usuarioId === usuarioId && t.motivo.includes('Bono de bienvenida')
     );
 
     if (!yaRecibioBonus) {
@@ -345,7 +404,7 @@ export class RecompensasService {
   /**
    * Canjea un voucher con puntos
    */
-  canjearVoucher(voucherId: string): { exito: boolean; mensaje: string; voucher?: VoucherCanjeado } {
+  async canjearVoucher(voucherId: string): Promise<{ exito: boolean; mensaje: string; voucher?: VoucherCanjeado }> {
     const usuario = this.authService.getUsuarioActualSync();
     if (!usuario) {
       return { exito: false, mensaje: 'No hay sesión activa' };
@@ -374,8 +433,10 @@ export class RecompensasService {
       };
     }
 
+    console.log(`🎫 Canjeando voucher: ${voucher.nombre}`);
+
     // Gastar puntos
-    const exito = this.gastarPuntos(
+    const exito = await this.gastarPuntos(
       voucher.puntosNecesarios,
       `Voucher: ${voucher.nombre}`,
       voucher.id
@@ -386,33 +447,43 @@ export class RecompensasService {
     }
 
     // Crear voucher canjeado
-    const fechaCanje = new Date();
     const fechaExpiracion = voucher.duracionDias
-      ? new Date(fechaCanje.getTime() + voucher.duracionDias * 24 * 60 * 60 * 1000)
+      ? new Date(Date.now() + voucher.duracionDias * 24 * 60 * 60 * 1000)
       : undefined;
 
-    const voucherCanjeado: VoucherCanjeado = {
-      id: this.generarId(),
+    const voucherCanjeado: any = {
       voucherId: voucher.id,
       voucher: { ...voucher },
       usuarioId: usuario.id,
-      fechaCanje,
-      fechaExpiracion,
+      fechaCanje: serverTimestamp(),
+      fechaExpiracion: fechaExpiracion || null,
       usado: false,
       codigo: this.generarCodigoVoucher()
     };
 
-    this.guardarVoucherCanjeado(voucherCanjeado);
+    const docRef = await this.guardarVoucherCanjeadoFirestore(voucherCanjeado);
 
-    // Actualizar stock si aplica
+    // Actualizar stock si aplica (esto debería manejarse a nivel de Firestore o admin)
     if (voucher.stock !== undefined) {
       voucher.stock--;
     }
 
+    const voucherCanjeadoCompleto: VoucherCanjeado = {
+      ...voucherCanjeado,
+      id: docRef.id,
+      fechaCanje: new Date(),
+      fechaExpiracion
+    };
+
+    // Actualizar cache local
+    this.vouchersCanjeadosCache.push(voucherCanjeadoCompleto);
+
+    console.log('✅ Voucher canjeado exitosamente');
+
     return {
       exito: true,
       mensaje: '¡Voucher canjeado exitosamente!',
-      voucher: voucherCanjeado
+      voucher: voucherCanjeadoCompleto
     };
   }
 
@@ -420,11 +491,7 @@ export class RecompensasService {
    * Obtiene los vouchers canjeados por el usuario actual
    */
   obtenerVouchersCanjeados(): VoucherCanjeado[] {
-    const usuario = this.authService.getUsuarioActualSync();
-    if (!usuario) return [];
-
-    const vouchers = this.cargarVouchersCanjeados();
-    return vouchers.filter(v => v.usuarioId === usuario.id);
+    return this.vouchersCanjeadosCache;
   }
 
   /**
@@ -444,22 +511,42 @@ export class RecompensasService {
   /**
    * Marca un voucher como usado
    */
-  usarVoucher(voucherId: string, articuloId?: string): boolean {
-    const vouchers = this.cargarVouchersCanjeados();
-    const voucher = vouchers.find(v => v.id === voucherId);
+  async usarVoucher(voucherId: string, articuloId?: string): Promise<boolean> {
+    const voucher = this.vouchersCanjeadosCache.find(v => v.id === voucherId);
 
     if (!voucher || voucher.usado) {
       return false;
     }
 
-    voucher.usado = true;
-    voucher.fechaUso = new Date();
-    if (articuloId) {
-      voucher.articuloAplicado = articuloId;
-    }
+    console.log(`✔️ Marcando voucher ${voucherId} como usado`);
 
-    this.guardarTodosLosVouchersCanjeados(vouchers);
-    return true;
+    try {
+      // Actualizar en Firestore
+      const voucherDoc = doc(this.firestore, 'vouchers_canjeados', voucherId);
+      const updateData: any = {
+        usado: true,
+        fechaUso: serverTimestamp()
+      };
+
+      if (articuloId) {
+        updateData.articuloAplicado = articuloId;
+      }
+
+      await updateDoc(voucherDoc, updateData);
+
+      // Actualizar cache local
+      voucher.usado = true;
+      voucher.fechaUso = new Date();
+      if (articuloId) {
+        voucher.articuloAplicado = articuloId;
+      }
+
+      console.log('✅ Voucher marcado como usado');
+      return true;
+    } catch (error) {
+      console.error('❌ Error al marcar voucher como usado:', error);
+      return false;
+    }
   }
 
   // ============================================
@@ -470,13 +557,7 @@ export class RecompensasService {
    * Obtiene todas las transacciones del usuario actual
    */
   obtenerHistorialPuntos(): TransaccionPuntos[] {
-    const usuario = this.authService.getUsuarioActualSync();
-    if (!usuario) return [];
-
-    const transacciones = this.obtenerTransacciones();
-    return transacciones
-      .filter(t => t.usuarioId === usuario.id)
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    return this.transaccionesCache;
   }
 
   /**
@@ -509,33 +590,37 @@ export class RecompensasService {
   }
 
   // ============================================
-  // ALMACENAMIENTO
+  // ALMACENAMIENTO FIRESTORE
   // ============================================
 
-  private obtenerTransacciones(): TransaccionPuntos[] {
-    const data = localStorage.getItem(this.TRANSACCIONES_KEY);
-    return data ? JSON.parse(data) : [];
+  private async guardarTransaccionFirestore(transaccion: any): Promise<any> {
+    try {
+      const transaccionesCollection = collection(this.firestore, 'transacciones');
+      const docRef = await addDoc(transaccionesCollection, transaccion);
+
+      // Actualizar cache local
+      this.transaccionesCache.unshift({
+        ...transaccion,
+        id: docRef.id,
+        fecha: new Date()
+      });
+
+      return docRef;
+    } catch (error) {
+      console.error('❌ Error al guardar transacción:', error);
+      throw error;
+    }
   }
 
-  private guardarTransaccion(transaccion: TransaccionPuntos): void {
-    const transacciones = this.obtenerTransacciones();
-    transacciones.push(transaccion);
-    localStorage.setItem(this.TRANSACCIONES_KEY, JSON.stringify(transacciones));
-  }
-
-  private cargarVouchersCanjeados(): VoucherCanjeado[] {
-    const data = localStorage.getItem(this.VOUCHERS_CANJEADOS_KEY);
-    return data ? JSON.parse(data) : [];
-  }
-
-  private guardarVoucherCanjeado(voucher: VoucherCanjeado): void {
-    const vouchers = this.cargarVouchersCanjeados();
-    vouchers.push(voucher);
-    localStorage.setItem(this.VOUCHERS_CANJEADOS_KEY, JSON.stringify(vouchers));
-  }
-
-  private guardarTodosLosVouchersCanjeados(vouchers: VoucherCanjeado[]): void {
-    localStorage.setItem(this.VOUCHERS_CANJEADOS_KEY, JSON.stringify(vouchers));
+  private async guardarVoucherCanjeadoFirestore(voucher: any): Promise<any> {
+    try {
+      const vouchersCollection = collection(this.firestore, 'vouchers_canjeados');
+      const docRef = await addDoc(vouchersCollection, voucher);
+      return docRef;
+    } catch (error) {
+      console.error('❌ Error al guardar voucher canjeado:', error);
+      throw error;
+    }
   }
 
   // ============================================

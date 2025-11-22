@@ -180,6 +180,20 @@
     </div>
   </div>
 
+  <!-- Botón Ver Mis Reseñas -->
+  <ion-card class="resenas-card">
+    <ion-card-content>
+      <button class="menu-button resenas-button" (click)="verMisResenas()">
+        <ion-icon name="star"></ion-icon>
+        <div class="resenas-info">
+          <span class="resenas-titulo">Mis Reseñas</span>
+          <span class="resenas-descripcion">Ver calificaciones y comentarios</span>
+        </div>
+        <ion-icon name="chevron-forward" slot="end"></ion-icon>
+      </button>
+    </ion-card-content>
+  </ion-card>
+
   <!-- Información personal -->
   <ion-card class="info-card">
     <ion-card-header>
@@ -230,8 +244,9 @@
       <ion-card-title>Ayuda y configuración</ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <button 
-        class="menu-button" 
+      <button
+        *ngIf="!esAdmin()"
+        class="menu-button"
         (click)="irATrueques()">
         <ion-icon name="list"></ion-icon>
         <span>Mis trueques</span>
@@ -256,7 +271,7 @@
       </button>
 
       <button
-        *ngIf="esAdmin"
+        *ngIf="esAdmin()"
         class="menu-button admin-button"
         (click)="irAPanelAdmin()">
         <ion-icon name="shield-checkmark"></ion-icon>

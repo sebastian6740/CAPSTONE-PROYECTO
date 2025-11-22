@@ -24,7 +24,6 @@ export class PerfilComponent implements OnInit {
   puedeActualizarFoto = false;
   diasParaFoto = 0;
   Math = Math;
-  esAdmin = false;
 
   // Sistema de puntos
   puntosActuales = 0;
@@ -56,7 +55,6 @@ export class PerfilComponent implements OnInit {
 
   ngOnInit() {
     this.cargarDatos();
-    this.esAdmin = this.authService.esAdmin();
     this.verificarFoto();
     this.cargarPuntos();
   }
@@ -381,6 +379,16 @@ export class PerfilComponent implements OnInit {
 
   irATrueques() {
     this.router.navigate(['/mis-trueques']);
+  }
+
+  verMisResenas() {
+    if (this.usuario?.id) {
+      this.router.navigate(['/perfil-publico', this.usuario.id]);
+    }
+  }
+
+  esAdmin(): boolean {
+    return this.authService.esAdmin();
   }
 
   private async mostrarMensaje(mensaje: string, color: string) {

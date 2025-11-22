@@ -30,53 +30,59 @@
   </div>
 
   <!-- Lista de conversaciones -->
-  <div class="conversaciones-list">
-    <div
-      *ngFor="let conversacion of conversacionesFiltradas"
-      class="conversacion-card"
-      (click)="abrirChat(conversacion)">
+  <ion-list>
+    <ion-item-sliding *ngFor="let conversacion of conversacionesFiltradas">
+      <!-- Contenido de la conversación -->
+      <ion-item
+        button
+        (click)="abrirChat(conversacion)"
+        lines="full"
+        class="conversacion-item">
 
-      <div class="avatar-container">
-        <img
-          *ngIf="conversacion.otroUsuario.foto"
-          [src]="conversacion.otroUsuario.foto"
-          alt="Foto de perfil">
-        <div *ngIf="!conversacion.otroUsuario.foto" class="avatar-placeholder">
-          <ion-icon name="person"></ion-icon>
+        <div class="conversacion-card">
+          <div class="avatar-container">
+            <img
+              *ngIf="conversacion.otroUsuario.foto"
+              [src]="conversacion.otroUsuario.foto"
+              alt="Foto de perfil"
+              class="avatar-img">
+            <div *ngIf="!conversacion.otroUsuario.foto" class="avatar-placeholder">
+              <ion-icon name="person"></ion-icon>
+            </div>
+            <!-- Badge de mensajes no leídos -->
+            <span
+              *ngIf="obtenerMensajesNoLeidos(conversacion) > 0"
+              class="unread-badge">
+              {{ obtenerMensajesNoLeidos(conversacion) }}
+            </span>
+          </div>
+
+          <div class="conversacion-info">
+            <div class="info-header">
+              <h3 class="nombre">{{ conversacion.otroUsuario.nombre }}</h3>
+              <span class="timestamp">{{ formatearFecha(conversacion.ultimaActualizacion) }}</span>
+            </div>
+
+            <div *ngIf="conversacion.articuloRelacionado" class="articulo-tag">
+              <ion-icon name="cube-outline"></ion-icon>
+              <span>{{ conversacion.articuloRelacionado.nombre }}</span>
+            </div>
+
+            <p
+              class="ultimo-mensaje"
+              [class.no-leido]="obtenerMensajesNoLeidos(conversacion) > 0">
+              {{ conversacion.ultimoMensaje || 'Sin mensajes' }}
+            </p>
+          </div>
         </div>
-        <span
-          *ngIf="obtenerMensajesNoLeidos(conversacion) > 0"
-          class="unread-badge">
-          {{ obtenerMensajesNoLeidos(conversacion) }}
-        </span>
-      </div>
+      </ion-item>
 
-      <div class="conversacion-info">
-        <div class="info-header">
-          <h3 class="nombre">{{ conversacion.otroUsuario.nombre }}</h3>
-          <span class="timestamp">{{ formatearFecha(conversacion.ultimaActualizacion) }}</span>
-        </div>
-
-        <div *ngIf="conversacion.articuloRelacionado" class="articulo-tag">
-          <ion-icon name="cube-outline"></ion-icon>
-          <span>{{ conversacion.articuloRelacionado.nombre }}</span>
-        </div>
-
-        <p
-          class="ultimo-mensaje"
-          [class.no-leido]="obtenerMensajesNoLeidos(conversacion) > 0">
-          {{ conversacion.ultimoMensaje || 'Sin mensajes' }}
-        </p>
-      </div>
-
-      <div class="conversacion-actions">
-        <ion-button
-          fill="clear"
-          size="small"
-          (click)="eliminarConversacion($event, conversacion)">
-          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-        </ion-button>
-      </div>
-    </div>
-  </div>
+      <!-- Opciones al deslizar -->
+      <ion-item-options side="end">
+        <ion-item-option color="danger" (click)="confirmarEliminar(conversacion)">
+          <ion-icon slot="icon-only" name="trash"></ion-icon>
+        </ion-item-option>
+      </ion-item-options>
+    </ion-item-sliding>
+  </ion-list>
 </ion-content>

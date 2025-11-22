@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonicModule, AlertController, ModalController, ToastController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
@@ -6,28 +6,31 @@ import { AuthService } from '../../core/services/auth.service';
 import { ArticulosService, Articulo } from '../../core/services/articulos';
 import { Usuario } from '../../core/models/user.model';
 import { DetalleUsuarioModalComponent } from '../detalle-usuario-modal/detalle-usuario-modal.component';
+import { FirebaseDatePipe } from '../../core/pipes/firebase-date.pipe';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
-  imports: [IonicModule, CommonModule]
+  imports: [IonicModule, CommonModule, FirebaseDatePipe]
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
 
   usuarios: Usuario[] = [];
   articulos: Articulo[] = [];
   fotosPendientes: Usuario[] = [];
-  vistaActiva: 'articulos' | 'usuarios' | 'fotos' = 'articulos';
+  vistaActiva: 'articulos' | 'usuarios' | 'fotos' | 'pendientes' = 'pendientes';
   usuarioAdmin: Usuario | null = null;
   procesando: boolean = false;
+  private articulosSubscription: any;
 
   estadisticas = {
     totalUsuarios: 0,
     totalArticulos: 0,
     articulosHoy: 0,
-    usuariosNuevos: 0
+    usuariosNuevos: 0,
+    articulosPendientes: 0
   };
 
   constructor(
@@ -44,17 +47,24 @@ export class AdminComponent implements OnInit {
     this.cargarDatos();
   }
 
-  cargarDatos() {
+  async cargarDatos() {
+    console.log('⚙️ Admin: Cargando datos...');
+
     // Cargar usuarios
-    this.usuarios = this.authService.obtenerTodosUsuarios();
+    this.usuarios = await this.authService.obtenerTodosUsuarios();
 
     // Cargar fotos pendientes
-    this.fotosPendientes = this.authService.obtenerUsuariosConFotosPendientes();
+    this.fotosPendientes = await this.authService.obtenerUsuariosConFotosPendientes();
 
-    // Cargar artículos
-    this.articulosService.articulos$.subscribe(arts => {
+    // Cargar artículos (solo una vez)
+    if (this.articulosSubscription) {
+      this.articulosSubscription.unsubscribe();
+    }
+
+    this.articulosSubscription = this.articulosService.articulos$.subscribe(arts => {
       this.articulos = arts;
       this.calcularEstadisticas();
+      console.log(`✅ Admin: ${this.articulos.length} artículos cargados`);
     });
   }
 
@@ -66,7 +76,10 @@ export class AdminComponent implements OnInit {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     this.estadisticas.articulosHoy = this.articulos.filter(art => {
-      const fechaPub = new Date(art.fechaPublicacion || '');
+      if (!art.fechaPublicacion) return false;
+      const fechaPub = art.fechaPublicacion instanceof Date
+        ? new Date(art.fechaPublicacion)
+        : new Date();
       fechaPub.setHours(0, 0, 0, 0);
       return fechaPub.getTime() === hoy.getTime();
     }).length;
@@ -78,12 +91,23 @@ export class AdminComponent implements OnInit {
       const fechaRegistro = new Date(user.fechaRegistro);
       return fechaRegistro >= hace7Dias;
     }).length;
+
+    // Artículos pendientes de aprobación
+    this.estadisticas.articulosPendientes = this.articulos.filter(art => art.aprobado === false).length;
   }
 
   cambiarVista(vista: any) {
-    if (vista === 'articulos' || vista === 'usuarios' || vista === 'fotos') {
+    if (vista === 'articulos' || vista === 'usuarios' || vista === 'fotos' || vista === 'pendientes') {
       this.vistaActiva = vista;
     }
+  }
+
+  getArticulosPendientes(): Articulo[] {
+    return this.articulos.filter(art => art.aprobado === false);
+  }
+
+  getArticulosAprobados(): Articulo[] {
+    return this.articulos.filter(art => art.aprobado === true);
   }
 
   async eliminarArticulo(articulo: Articulo) {
@@ -283,5 +307,103 @@ export class AdminComponent implements OnInit {
   cerrarSesion() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  async aprobarArticulo(articulo: Articulo) {
+    const alert = await this.alertController.create({
+      header: 'Aprobar artículo',
+      message: `¿Deseas aprobar el artículo "${articulo.nombre}" de ${this.obtenerNombreUsuario(articulo.usuarioId || '')}?`,
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel'
+        },
+        {
+          text: 'Aprobar',
+          handler: async () => {
+            try {
+              this.procesando = true;
+              await this.articulosService.aprobarArticulo(articulo.id || '');
+              this.mostrarToast('Artículo aprobado correctamente');
+              this.procesando = false;
+            } catch (error) {
+              this.procesando = false;
+              this.mostrarToast('Error al aprobar el artículo', true);
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async rechazarArticulo(articulo: Articulo) {
+    // Primero pedir el motivo del rechazo
+    const alertMotivo = await this.alertController.create({
+      header: 'Rechazar artículo',
+      message: `Indica el motivo por el que rechazas "${articulo.nombre}". Este mensaje será enviado al usuario.`,
+      inputs: [
+        {
+          name: 'motivo',
+          type: 'textarea',
+          placeholder: 'Ej: El artículo no cumple con las políticas de la plataforma...',
+          attributes: {
+            maxlength: 500
+          }
+        }
+      ],
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel'
+        },
+        {
+          text: 'Continuar',
+          handler: async (data) => {
+            if (!data.motivo || data.motivo.trim() === '') {
+              this.mostrarToast('Debes indicar un motivo de rechazo', true);
+              return false;
+            }
+
+            // Confirmar el rechazo
+            const alertConfirmar = await this.alertController.create({
+              header: 'Confirmar rechazo',
+              message: `¿Estás seguro de rechazar este artículo? Se eliminará permanentemente y el usuario recibirá una notificación.`,
+              buttons: [
+                {
+                  text: 'Cancelar',
+                  role: 'cancel'
+                },
+                {
+                  text: 'Rechazar',
+                  role: 'destructive',
+                  handler: async () => {
+                    try {
+                      this.procesando = true;
+                      await this.articulosService.rechazarArticulo(articulo.id || '', data.motivo.trim());
+                      this.mostrarToast('Artículo rechazado y usuario notificado');
+                      this.procesando = false;
+                    } catch (error) {
+                      this.procesando = false;
+                      this.mostrarToast('Error al rechazar el artículo', true);
+                    }
+                  }
+                }
+              ]
+            });
+            await alertConfirmar.present();
+            return true;
+          }
+        }
+      ]
+    });
+    await alertMotivo.present();
+  }
+
+  ngOnDestroy() {
+    console.log('🔕 Admin: Limpiando suscripciones...');
+    if (this.articulosSubscription) {
+      this.articulosSubscription.unsubscribe();
+    }
   }
 }
