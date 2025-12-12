@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
+import { SuscripcionComponent } from './pages/suscripcion/suscripcion.component';
 
 export const routes: Routes = [
   {
@@ -16,6 +17,10 @@ export const routes: Routes = [
   {
     path: 'registro',
     loadComponent: () => import('./pages/registro/registro.component').then(m => m.RegistroComponent)
+  },
+  {
+    path: 'verificar-telefono',
+    loadComponent: () => import('./pages/verificar-telefono/verificar-telefono.component').then(m => m.VerificarTelefonoComponent)
   },
   {
     path: 'home',
@@ -61,6 +66,10 @@ export const routes: Routes = [
   {
     path: 'perfil-publico/:id',
     loadComponent: () => import('./pages/perfil-publico/perfil-publico.component').then(m => m.PerfilPublicoComponent)
+  },
+  {
+    path: 'suscripcion',
+    component: SuscripcionComponent
   },
   {
     path: '**',

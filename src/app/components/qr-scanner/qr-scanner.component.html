@@ -1,0 +1,41 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cerrar()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Escanear QR</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="scanner-container">
+    <div *ngIf="permisosCamara" class="video-container">
+      <video 
+        #video 
+        playsinline 
+        autoplay
+        style="width: 100%; max-width: 100%; border-radius: 12px;">
+      </video>
+      <canvas #canvas style="display: none;"></canvas>
+      
+      <div class="scanner-overlay">
+        <div class="scanner-frame"></div>
+      </div>
+
+      <div class="scanner-info">
+        <ion-icon name="qr-code"></ion-icon>
+        <p>Apunta el QR de la permuta</p>
+      </div>
+    </div>
+
+    <div *ngIf="!permisosCamara" class="permiso-denegado">
+      <ion-icon name="camera-outline"></ion-icon>
+      <p>No se pudo acceder a la cámara</p>
+      <ion-button fill="outline" (click)="cerrar()">
+        Cerrar
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
