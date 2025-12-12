@@ -1,4 +1,4 @@
-import { Injectable, inject, NgZone } from '@angular/core';
+import { Injectable, inject, NgZone, Injector } from '@angular/core';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
 import { map, switchMap, catchError, tap } from 'rxjs/operators';
 import { Usuario, RespuestaActualizacion, RespuestaFoto } from '../models/user.model';
@@ -44,26 +44,40 @@ export class AuthService {
   private firestore = inject(Firestore);
   private storage = inject(Storage);
   private ngZone = inject(NgZone);
+  private injector = inject(Injector);
 
   private usuarioActual$ = new BehaviorSubject<Usuario | null>(null);
   private readonly DIAS_LIMITE_FOTO = 30;
 
   private firestoreDisponible = false;
   private mensajesService: any; // Lazy injection para evitar dependencia circular
+  private notificacionesService: any; // Lazy injection para evitar dependencia circular
 
   // Detección de sesión dual
   private sesionTokenLocal: string = '';
   private sesionListener: any = null;
   public sesionDualDetectada$ = new BehaviorSubject<boolean>(false);
 
+  // Control de logout para evitar auto-login
+  private estaHaciendoLogout = false;
+  private readonly LOGOUT_FLAG_KEY = 'firebase_logout_in_progress';
+
   constructor() {
+    // Verificar si hay un logout en progreso al inicializar
+    const logoutEnProgreso = sessionStorage.getItem(this.LOGOUT_FLAG_KEY);
+    if (logoutEnProgreso === 'true') {
+      this.estaHaciendoLogout = true;
+      console.log('🔄 Detectado logout en progreso desde sessionStorage');
+    }
+
     // Verificar disponibilidad de Firestore antes de inicializar
     this.verificarFirestore().then(() => {
       this.inicializarAuthListener();
       // Inicializar admin después de un delay para evitar race conditions
-      setTimeout(() => {
-        this.inicializarAdminDefault();
-      }, 2000);
+      // COMENTADO: Admin creado manualmente en Firebase Console
+      // setTimeout(() => {
+      //   this.inicializarAdminDefault();
+      // }, 2000);
     });
   }
 
@@ -99,6 +113,13 @@ export class AuthService {
     onAuthStateChanged(this.auth, async (firebaseUser) => {
       this.ngZone.run(async () => {
         if (firebaseUser) {
+          // Si estamos haciendo logout, ignorar este evento
+          if (this.estaHaciendoLogout) {
+            console.log('⏭️ Ignorando auto-login durante proceso de logout');
+            return;
+          }
+
+          console.log('🔐 Iniciando proceso de login para:', firebaseUser.email);
           // Usuario autenticado - cargar datos de Firestore
           const usuario = await this.cargarUsuarioDeFirestore(firebaseUser.uid);
           this.usuarioActual$.next(usuario);
@@ -110,7 +131,11 @@ export class AuthService {
           }
         } else {
           // Usuario no autenticado
+          console.log('👤 No hay usuario autenticado');
           this.usuarioActual$.next(null);
+          // Resetear flag de logout y limpiar sessionStorage
+          this.estaHaciendoLogout = false;
+          sessionStorage.removeItem(this.LOGOUT_FLAG_KEY);
         }
       });
     });
@@ -206,7 +231,7 @@ export class AuthService {
             nombre: 'Administrador',
             email: adminEmail,
             contrasena: '', // No guardamos la contraseña en Firestore
-            telefono: '+56912345678',
+            telefono: '+5636542359',
             ciudad: 'Santiago',
             foto: undefined,
             fechaRegistro: new Date(),
@@ -279,6 +304,14 @@ export class AuthService {
         console.log('✅ Usuario creado en Firebase Auth:', userCredential.user.uid);
 
         try {
+          // Esperar un momento para que Firebase Auth sincronice el token
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Verificar que el usuario sigue autenticado
+          await userCredential.user.reload();
+          const idToken = await userCredential.user.getIdToken(true);
+          console.log('🔑 Token de autenticación obtenido');
+
           // Crear documento de usuario en Firestore
           const nuevoUsuario: any = {
             nombre: datosRegistro.nombre,
@@ -389,17 +422,44 @@ export class AuthService {
   /**
    * Iniciar sesión
    */
-  login(email: string, contrasena: string): Observable<{exito: boolean, mensaje: string}> {
+  login(email: string, contrasena: string): Observable<{exito: boolean, mensaje: string, usuarioNoVerificado?: boolean, userId?: string, telefono?: string}> {
     return from(
       signInWithEmailAndPassword(this.auth, email, contrasena)
     ).pipe(
       switchMap(async (userCredential) => {
+        // Verificar si el usuario está verificado
+        const userDocRef = doc(this.firestore, 'usuarios', userCredential.user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          // Cerrar sesión si el usuario no existe en Firestore
+          await signOut(this.auth);
+          return {
+            exito: false,
+            mensaje: 'Usuario no encontrado en la base de datos'
+          };
+        }
+
+        const userData = userDoc.data();
+
+        // Verificar si el usuario está verificado
+        if (!userData['verificado']) {
+          // Cerrar sesión si no está verificado
+          await signOut(this.auth);
+          return {
+            exito: false,
+            mensaje: 'Tu cuenta no está verificada. ¿Deseas que te reenviemos el código de verificación?',
+            usuarioNoVerificado: true,
+            userId: userCredential.user.uid,
+            telefono: userData['telefono']
+          };
+        }
+
         // Generar token de sesión único
         this.sesionTokenLocal = this.generarTokenSesion();
         console.log(`🔑 Token de sesión generado: ${this.sesionTokenLocal.substring(0, 10)}...`);
 
         // Guardar token de sesión en Firestore
-        const userDocRef = doc(this.firestore, 'usuarios', userCredential.user.uid);
         await updateDoc(userDocRef, {
           sesion_activa: this.sesionTokenLocal,
           ultima_actividad: serverTimestamp()
@@ -452,6 +512,13 @@ export class AuthService {
    * Cerrar sesión
    */
   logout(): Observable<void> {
+    console.log('🚪 Cerrando sesión...');
+
+    // Marcar que estamos haciendo logout para evitar auto-login
+    this.estaHaciendoLogout = true;
+    // Guardar flag en sessionStorage para que persista en refreshes
+    sessionStorage.setItem(this.LOGOUT_FLAG_KEY, 'true');
+
     // Detener listener de sesión dual
     this.detenerListenerSesionDual();
 
@@ -459,7 +526,52 @@ export class AuthService {
     this.sesionTokenLocal = '';
     this.sesionDualDetectada$.next(false);
 
-    return from(signOut(this.auth));
+    // Limpiar usuario actual ANTES de cerrar sesión en Firebase
+    this.usuarioActual$.next(null);
+
+    // Limpiar credenciales temporales de verificación
+    sessionStorage.removeItem('temp_verification_email');
+    sessionStorage.removeItem('temp_verification_password');
+
+    // Limpiar TODA la persistencia de localStorage relacionada con Firebase ANTES de signOut
+    this.limpiarPersistenciaFirebase();
+
+    return from(signOut(this.auth)).pipe(
+      tap(() => {
+        console.log('✅ Sesión de Firebase cerrada correctamente');
+      }),
+      catchError((error) => {
+        console.error('❌ Error al cerrar sesión:', error);
+        this.estaHaciendoLogout = false;
+        sessionStorage.removeItem(this.LOGOUT_FLAG_KEY);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Limpiar toda la persistencia de Firebase del localStorage
+   */
+  private limpiarPersistenciaFirebase(): void {
+    try {
+      // Limpiar todas las claves de Firebase del localStorage
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('firebase:')) {
+          keysToRemove.push(key);
+        }
+      }
+
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`🧹 Limpiado: ${key}`);
+      });
+
+      console.log('✅ Persistencia de Firebase limpiada');
+    } catch (error) {
+      console.error('Error limpiando persistencia:', error);
+    }
   }
 
   /**
@@ -540,25 +652,49 @@ export class AuthService {
     return from(uploadBytes(storageRef, blob)).pipe(
       switchMap(() => getDownloadURL(storageRef)),
       switchMap(async (fotoUrl) => {
-        // Guardar foto como pendiente en Firestore
         const userDocRef = doc(this.firestore, 'usuarios', usuarioActual.id);
-        await updateDoc(userDocRef, {
-          foto_pendiente: fotoUrl,
-          estado_foto: 'pendiente',
-          ultima_actualizacion_foto: serverTimestamp()
-        });
 
-        // Recargar usuario actualizado
-        const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
-        if (usuarioActualizado) {
-          this.usuarioActual$.next(usuarioActualizado);
+        // Los administradores no necesitan aprobación
+        if (this.esAdmin()) {
+          // Aprobar foto directamente
+          await updateDoc(userDocRef, {
+            foto: fotoUrl,
+            foto_pendiente: null,
+            estado_foto: 'aprobada',
+            ultima_actualizacion_foto: serverTimestamp()
+          });
+
+          // Recargar usuario actualizado
+          const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+          if (usuarioActualizado) {
+            this.usuarioActual$.next(usuarioActualizado);
+          }
+
+          return {
+            exito: true,
+            mensaje: '✅ Foto actualizada correctamente',
+            foto_url: fotoUrl
+          };
+        } else {
+          // Usuarios normales: guardar foto como pendiente
+          await updateDoc(userDocRef, {
+            foto_pendiente: fotoUrl,
+            estado_foto: 'pendiente',
+            ultima_actualizacion_foto: serverTimestamp()
+          });
+
+          // Recargar usuario actualizado
+          const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioActual.id);
+          if (usuarioActualizado) {
+            this.usuarioActual$.next(usuarioActualizado);
+          }
+
+          return {
+            exito: true,
+            mensaje: '📸 Foto enviada. Está en revisión por el administrador',
+            foto_url: fotoUrl
+          };
         }
-
-        return {
-          exito: true,
-          mensaje: '📸 Foto enviada. Está en revisión por el administrador',
-          foto_url: fotoUrl
-        };
       }),
       catchError((error) => {
         console.error('Error al subir foto:', error);
@@ -587,19 +723,40 @@ export class AuthService {
 
   /**
    * Verificar si puede actualizar la foto (límite de 30 días)
+   * Los administradores no tienen límite de tiempo
    */
   puedeActualizarFoto(): boolean {
     const usuario = this.usuarioActual$.value;
-    if (!usuario) return false;
+    if (!usuario) {
+      console.log('❌ puedeActualizarFoto: No hay usuario');
+      return false;
+    }
+
+    // Los administradores pueden cambiar su foto cuantas veces quieran
+    if (this.esAdmin()) {
+      console.log('✅ puedeActualizarFoto: Usuario es admin, puede actualizar sin límite');
+      return true;
+    }
+
+    // Si no tiene foto, siempre puede subir una
+    if (!usuario.foto && !usuario.foto_pendiente) {
+      console.log('✅ puedeActualizarFoto: Usuario sin foto, puede subir');
+      return true;
+    }
 
     // Si no tiene fecha de última actualización, puede actualizar
-    if (!usuario.ultima_actualizacion_foto) return true;
+    if (!usuario.ultima_actualizacion_foto) {
+      console.log('✅ puedeActualizarFoto: Usuario sin ultima_actualizacion_foto, puede actualizar');
+      return true;
+    }
 
     const ahora = new Date();
     const ultimaActualizacion = new Date(usuario.ultima_actualizacion_foto);
     const diasTranscurridos = (ahora.getTime() - ultimaActualizacion.getTime()) / (1000 * 60 * 60 * 24);
 
-    return diasTranscurridos >= this.DIAS_LIMITE_FOTO;
+    const puede = diasTranscurridos >= this.DIAS_LIMITE_FOTO;
+    console.log(`${puede ? '✅' : '❌'} puedeActualizarFoto: Días transcurridos: ${diasTranscurridos.toFixed(1)}, Límite: ${this.DIAS_LIMITE_FOTO}`);
+    return puede;
   }
 
   /**
@@ -811,6 +968,17 @@ export class AuthService {
           foto_pendiente: null
         });
 
+        // Enviar notificación al usuario (lazy injection para evitar dependencia circular)
+        try {
+          if (!this.notificacionesService) {
+            const { NotificacionesService } = await import('./notificaciones.service');
+            this.notificacionesService = this.injector.get(NotificacionesService);
+          }
+          await this.notificacionesService.notificarFotoAprobada(usuarioId);
+        } catch (error) {
+          console.error('Error al enviar notificación de foto aprobada:', error);
+        }
+
         // Si el usuario aprobado es el actual, actualizar sesión
         if (this.usuarioActual$.value?.id === usuarioId) {
           const usuarioActualizado = await this.cargarUsuarioDeFirestore(usuarioId);
@@ -875,6 +1043,17 @@ export class AuthService {
           foto_pendiente: null,
           ultima_actualizacion_foto: null // Permitir subir de nuevo
         });
+
+        // Enviar notificación al usuario (lazy injection para evitar dependencia circular)
+        try {
+          if (!this.notificacionesService) {
+            const { NotificacionesService } = await import('./notificaciones.service');
+            this.notificacionesService = this.injector.get(NotificacionesService);
+          }
+          await this.notificacionesService.notificarFotoRechazada(usuarioId, motivo || '');
+        } catch (error) {
+          console.error('Error al enviar notificación de foto rechazada:', error);
+        }
 
         // Si el usuario rechazado es el actual, actualizar sesión
         if (this.usuarioActual$.value?.id === usuarioId) {
@@ -1044,6 +1223,24 @@ export class AuthService {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 15);
     return `${timestamp}-${random}`;
+  }
+
+  /**
+   * Aceptar términos y condiciones
+   */
+  async aceptarTerminos(usuarioId: string): Promise<boolean> {
+    try {
+      const userDocRef = doc(this.firestore, 'usuarios', usuarioId);
+      await updateDoc(userDocRef, {
+        terminosAceptados: true,
+        fechaAceptacionTerminos: new Date()
+      });
+      console.log('✅ Términos aceptados correctamente');
+      return true;
+    } catch (error) {
+      console.error('Error al aceptar términos:', error);
+      return false;
+    }
   }
 
   /**

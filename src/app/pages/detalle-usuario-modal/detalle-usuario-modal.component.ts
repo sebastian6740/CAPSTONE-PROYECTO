@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ModalController, AlertController, ToastController } from '@ionic/angular';
 import { Usuario } from '../../core/models/user.model';
@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
   selector: 'app-detalle-usuario-modal',
   templateUrl: './detalle-usuario-modal.component.html',
   styleUrls: ['./detalle-usuario-modal.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CommonModule, IonicModule]
 })

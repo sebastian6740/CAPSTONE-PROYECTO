@@ -1,6 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Firestore, collection, collectionData, addDoc, doc, deleteDoc, updateDoc, serverTimestamp, query, where, Timestamp, getDocs, writeBatch } from '@angular/fire/firestore';
+import { Storage, ref, uploadString, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { Mensaje, Conversacion, ConversacionConDetalles } from '../models/mensaje.model';
 import { AuthService } from './auth.service';
 import { Usuario } from '../models/user.model';
@@ -23,6 +24,7 @@ export class MensajesService {
 
   constructor(
     private firestore: Firestore,
+    private storage: Storage,
     private authService: AuthService,
     private ngZone: NgZone
   ) {
@@ -352,6 +354,7 @@ export class MensajesService {
         conversacionId,
         emisorId: usuarioActual.id,
         receptorId,
+        tipo: 'texto' as const,
         contenido,
         timestamp: serverTimestamp(),
         leido: false
@@ -393,6 +396,131 @@ export class MensajesService {
       } as Mensaje;
     } catch (error) {
       console.error('❌ Error al enviar mensaje a Firestore:', error);
+      throw error;
+    }
+  }
+
+  // Subir foto a Firebase Storage
+  private async subirFotoAStorage(
+    conversacionId: string,
+    fotoBase64: string,
+    metadata: { nombre: string; tamanio: number; ancho?: number; alto?: number }
+  ): Promise<string> {
+    // Validar tamaño máximo 5MB
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (metadata.tamanio > MAX_SIZE) {
+      throw new Error('La foto no puede superar 5MB');
+    }
+
+    const timestamp = Date.now();
+    const mensajeId = `msg_${timestamp}`;
+
+    // Crear referencia en Storage
+    const storageRef = ref(
+      this.storage,
+      `mensajes/${conversacionId}/${mensajeId}_${timestamp}.jpg`
+    );
+
+    console.log(`📤 Subiendo foto a Storage: mensajes/${conversacionId}/${mensajeId}_${timestamp}.jpg`);
+
+    // Subir con metadata
+    await uploadString(storageRef, fotoBase64, 'data_url', {
+      contentType: 'image/jpeg',
+      customMetadata: {
+        conversacionId,
+        uploadedBy: this.authService.getUsuarioActualSync()?.id || '',
+        uploadedAt: new Date().toISOString()
+      }
+    });
+
+    // Obtener URL de descarga
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log(`✅ Foto subida correctamente: ${downloadURL}`);
+    return downloadURL;
+  }
+
+  // Enviar mensaje con foto
+  async enviarFotoMensaje(
+    conversacionId: string,
+    fotoBase64: string,
+    caption: string = '',
+    metadata: { nombre: string; tamanio: number; ancho?: number; alto?: number }
+  ): Promise<Mensaje> {
+    const usuarioActual = this.authService.getUsuarioActualSync();
+    if (!usuarioActual) {
+      throw new Error('No hay usuario autenticado');
+    }
+
+    const conversacion = this.conversaciones.find(c => c.id === conversacionId);
+    if (!conversacion) {
+      throw new Error('Conversación no encontrada');
+    }
+
+    const receptorId = conversacion.participantes.find(id => id !== usuarioActual.id) || '';
+
+    console.log(`📸 Enviando mensaje con foto en conversación ${conversacionId}...`);
+
+    // Primero, crear mensaje con estado 'subiendo'
+    const mensajesCollection = collection(this.firestore, 'mensajes');
+    const docRef = await addDoc(mensajesCollection, {
+      conversacionId,
+      emisorId: usuarioActual.id,
+      receptorId,
+      tipo: 'foto',
+      contenido: caption,
+      timestamp: serverTimestamp(),
+      leido: false,
+      estado: 'subiendo'
+    });
+
+    try {
+      // Subir foto a Storage
+      const fotoUrl = await this.subirFotoAStorage(conversacionId, fotoBase64, metadata);
+
+      // Actualizar mensaje con URL y estado completado
+      await updateDoc(doc(this.firestore, 'mensajes', docRef.id), {
+        fotoUrl,
+        fotoMetadata: metadata,
+        estado: 'completado'
+      });
+
+      // Actualizar conversación
+      const conversacionDoc = doc(this.firestore, 'conversaciones', conversacionId);
+      const mensajesNoLeidosActual = conversacion.mensajesNoLeidos || {};
+      const nuevosNoLeidos = {
+        [usuarioActual.id]: mensajesNoLeidosActual[usuarioActual.id] || 0,
+        [receptorId]: (mensajesNoLeidosActual[receptorId] || 0) + 1
+      };
+
+      await updateDoc(conversacionDoc, {
+        ultimoMensaje: caption || '📷 Foto',
+        ultimaActualizacion: serverTimestamp(),
+        mensajesNoLeidos: nuevosNoLeidos
+      });
+
+      console.log(`✅ Mensaje con foto enviado correctamente`);
+
+      return {
+        id: docRef.id,
+        conversacionId,
+        emisorId: usuarioActual.id,
+        receptorId,
+        tipo: 'foto',
+        contenido: caption,
+        fotoUrl,
+        fotoMetadata: metadata,
+        timestamp: new Date(),
+        leido: false,
+        estado: 'completado'
+      } as Mensaje;
+
+    } catch (error) {
+      // Marcar mensaje como error
+      await updateDoc(doc(this.firestore, 'mensajes', docRef.id), {
+        estado: 'error',
+        errorMensaje: error instanceof Error ? error.message : 'Error al subir foto'
+      });
+      console.error('❌ Error al enviar foto:', error);
       throw error;
     }
   }

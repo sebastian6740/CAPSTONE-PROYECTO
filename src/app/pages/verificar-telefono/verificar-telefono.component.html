@@ -1,0 +1,73 @@
+<ion-content class="login-content">
+  <!-- Cubos animados de fondo -->
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+  <div class="cube"></div>
+
+  <!-- Logo y título -->
+  <div class="logo-container">
+    <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
+    <h1>Verificar Teléfono</h1>
+  </div>
+
+  <p class="login-subtitle">
+    Hemos enviado un código de verificación al número:<br>
+    <strong>{{ telefonoFormateado }}</strong>
+  </p>
+
+  <div class="container-formulario">
+    <!-- Input para el código -->
+    <ion-label position="">Código de verificación</ion-label>
+    <ion-item class="login-item" lines="none">
+      <ion-input
+        type="tel"
+        [(ngModel)]="codigo"
+        placeholder="000000"
+        maxlength="6"
+        inputmode="numeric"
+        [disabled]="verificando">
+      </ion-input>
+    </ion-item>
+
+    <div class="info-message" *ngIf="!puedeReenviar">
+      <ion-icon name="time-outline"></ion-icon>
+      Podrás reenviar el código en {{ tiempoRestante }}s
+    </div>
+
+    <!-- Botón Verificar -->
+    <ion-button
+      expand="block"
+      (click)="verificarCodigo()"
+      [disabled]="verificando || codigo.length !== 6"
+      class="login-btn ion-margin-top">
+      <ion-spinner *ngIf="verificando" name="crescent"></ion-spinner>
+      {{ verificando ? 'Verificando...' : 'Verificar Código' }}
+    </ion-button>
+
+    <!-- Botón Reenviar Código -->
+    <ion-button
+      expand="block"
+      fill="outline"
+      (click)="reenviarCodigo()"
+      [disabled]="!puedeReenviar || reenviando"
+      class="ion-margin-top">
+      <ion-spinner *ngIf="reenviando" name="crescent"></ion-spinner>
+      {{ reenviando ? 'Reenviando...' : 'Reenviar Código' }}
+    </ion-button>
+
+    <!-- Link para cancelar -->
+    <div class="registro-link">
+      <p>
+        <ion-text (click)="cancelarVerificacion()">
+          Cancelar y volver al registro
+        </ion-text>
+      </p>
+    </div>
+  </div>
+
+  <!-- Contenedor invisible para reCAPTCHA -->
+  <div id="recaptcha-container"></div>
+</ion-content>

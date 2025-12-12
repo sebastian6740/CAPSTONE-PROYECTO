@@ -3,9 +3,19 @@ export interface Mensaje {
   conversacionId: string;
   emisorId: string;
   receptorId: string;
-  contenido: string;
+  tipo: 'texto' | 'foto';  // Tipo de mensaje
+  contenido: string;       // Para mensajes de texto o caption de foto
+  fotoUrl?: string;        // URL de Firebase Storage para fotos
+  fotoMetadata?: {         // Metadata de la foto
+    nombre: string;
+    tamanio: number;
+    ancho?: number;
+    alto?: number;
+  };
   timestamp: Date;
   leido: boolean;
+  estado?: 'subiendo' | 'completado' | 'error';  // Estado de upload para fotos
+  errorMensaje?: string;   // Mensaje de error si falla el upload
 }
 
 export interface Conversacion {

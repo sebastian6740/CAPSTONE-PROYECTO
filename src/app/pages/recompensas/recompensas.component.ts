@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController, ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
@@ -9,6 +9,7 @@ import { Voucher, VoucherCanjeado } from '../../core/models/recompensas.model';
   selector: 'app-recompensas',
   templateUrl: './recompensas.component.html',
   styleUrls: ['./recompensas.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CommonModule, IonicModule]
 })

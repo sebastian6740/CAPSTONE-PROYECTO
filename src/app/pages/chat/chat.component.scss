@@ -41,7 +41,7 @@ ion-content {
   }
 }
 
-// Toolbar de artículo
+// Toolbar de artï¿½culo
 .articulo-header {
   --background: #dcf8c6;
   --min-height: 40px;
@@ -147,7 +147,7 @@ ion-content {
   }
 }
 
-// Estado vacío
+// Estado vacï¿½o
 .empty-chat {
   display: flex;
   flex-direction: column;
@@ -201,6 +201,19 @@ ion-footer {
       font-size: 15px;
     }
 
+    .attach-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      width: 40px;
+      height: 40px;
+
+      ion-icon {
+        font-size: 28px;
+        color: #666;
+      }
+    }
+
     .send-button {
       --padding-start: 8px;
       --padding-end: 8px;
@@ -217,5 +230,43 @@ ion-footer {
         color: #ccc;
       }
     }
+  }
+}
+
+// Mensaje con foto
+.mensaje-bubble.mensaje-foto {
+  padding: 4px;
+  max-width: 80%;
+
+  .foto-contenedor {
+    .mensaje-imagen {
+      width: 100%;
+      max-width: 250px;
+      border-radius: 8px;
+      display: block;
+      object-fit: cover;
+    }
+
+    .foto-caption {
+      margin: 8px 8px 4px 8px;
+      color: #2c3e50;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+  }
+}
+
+// Estado de carga de foto
+.foto-cargando {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  color: #666;
+  font-size: 13px;
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
   }
 }

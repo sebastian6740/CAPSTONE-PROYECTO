@@ -1,0 +1,119 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Términos y Condiciones</ion-title>
+    <ion-buttons slot="end" *ngIf="soloLectura">
+      <ion-button (click)="cerrar()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="terminos-container">
+    <h2>{{ soloLectura ? 'Términos y Condiciones' : 'Bienvenido a Trueques APP' }}</h2>
+    <p class="intro-text" *ngIf="!soloLectura">
+      Antes de comenzar a usar nuestra plataforma, por favor lee y acepta nuestros términos y condiciones.
+    </p>
+
+    <div class="terminos-content">
+      <h3>1. Aceptación de los términos</h3>
+      <p>
+        Al acceder y utilizar Trueques APP, aceptas estar sujeto a estos términos y condiciones de uso,
+        todas las leyes y regulaciones aplicables, y aceptas que eres responsable del cumplimiento de
+        todas las leyes locales aplicables.
+      </p>
+
+      <h3>2. Uso de la plataforma</h3>
+      <p>
+        Trueques APP es una plataforma diseñada para facilitar el intercambio de artículos entre usuarios.
+        Te comprometes a:
+      </p>
+      <ul>
+        <li>Proporcionar información veraz y actualizada</li>
+        <li>No publicar contenido ilegal, ofensivo o inapropiado</li>
+        <li>Respetar a los demás usuarios de la plataforma</li>
+        <li>No utilizar la plataforma para actividades fraudulentas</li>
+        <li>Ser responsable de los artículos que publicas para intercambio</li>
+      </ul>
+
+      <h3>3. Privacidad y datos personales</h3>
+      <p>
+        Nos comprometemos a proteger tu privacidad. La información personal que proporciones será
+        utilizada únicamente para facilitar los intercambios y mejorar nuestros servicios. No compartiremos
+        tu información con terceros sin tu consentimiento.
+      </p>
+
+      <h3>4. Responsabilidad</h3>
+      <p>
+        Trueques APP actúa como intermediario para facilitar los intercambios. No somos responsables por:
+      </p>
+      <ul>
+        <li>La calidad, autenticidad o estado de los artículos intercambiados</li>
+        <li>Disputas entre usuarios</li>
+        <li>Pérdidas o daños resultantes de intercambios</li>
+      </ul>
+
+      <h3>5. Verificación de usuarios</h3>
+      <p>
+        Para mantener la seguridad de la comunidad, implementamos un sistema de verificación por SMS
+        y calificaciones de usuarios. Los usuarios deben verificar su número de teléfono antes de
+        realizar intercambios.
+      </p>
+
+      <h3>6. Suscripciones</h3>
+      <p>
+        La plataforma ofrece suscripciones premium que permiten publicaciones ilimitadas. Los usuarios
+        no suscritos tienen una publicación gratuita, y luego deben pagar por publicaciones adicionales
+        o suscribirse al plan premium.
+      </p>
+
+      <h3>7. Modificaciones</h3>
+      <p>
+        Nos reservamos el derecho de modificar estos términos en cualquier momento. Las modificaciones
+        entrarán en vigor inmediatamente después de su publicación en la plataforma.
+      </p>
+
+      <h3>8. Contacto</h3>
+      <p>
+        Si tienes preguntas sobre estos términos, puedes contactarnos a través de la opción
+        "Reportar problema" en tu perfil.
+      </p>
+    </div>
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border" *ngIf="!soloLectura">
+  <ion-toolbar>
+    <div class="footer-buttons">
+      <ion-button
+        expand="block"
+        color="danger"
+        (click)="rechazarTerminos()"
+        class="btn-rechazar">
+        Rechazar
+      </ion-button>
+      <ion-button
+        expand="block"
+        color="success"
+        (click)="aceptarTerminos()"
+        class="btn-aceptar">
+        Aceptar Términos
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
+
+<ion-footer class="ion-no-border" *ngIf="soloLectura">
+  <ion-toolbar>
+    <div class="footer-buttons">
+      <ion-button
+        expand="block"
+        color="primary"
+        (click)="cerrar()"
+        class="btn-cerrar">
+        Cerrar
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

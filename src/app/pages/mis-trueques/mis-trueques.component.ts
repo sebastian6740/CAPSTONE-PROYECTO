@@ -1,22 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { IonicModule, AlertController, ToastController } from '@ionic/angular';
+import { FormsModule } from '@angular/forms';
+import { IonicModule, AlertController, ToastController, ModalController } from '@ionic/angular';
 import { ArticulosService, Articulo } from '../../core/services/articulos';
 import { AuthService } from '../../core/services/auth.service';
 import { RecompensasService } from '../../core/services/recompensas.service';
 import { FirebaseDatePipe } from '../../core/pipes/firebase-date.pipe';
+import { QRGeneratorComponent } from '../../components/qr-generator/qr-generator.component';
+import { QRService, PermutaCompletada } from '../../core/services/qr.service';
 
 @Component({
   selector: 'app-mis-trueques',
   standalone: true,
   templateUrl: './mis-trueques.component.html',
   styleUrls: ['./mis-trueques.component.scss'],
-  imports: [CommonModule, IonicModule, FirebaseDatePipe]
+  encapsulation: ViewEncapsulation.None,
+  imports: [CommonModule, FormsModule, IonicModule, FirebaseDatePipe]
 })
 export class MisTruequesComponent implements OnInit {
 
   misArticulos: Articulo[] = [];
+  historialTrueques: PermutaCompletada[] = [];
+  estadisticas: any = null;
+  cargandoHistorial: boolean = false;
+  vistaActual: 'articulos' | 'historial' = 'articulos';
 
   constructor(
     private router: Router,
@@ -24,15 +32,19 @@ export class MisTruequesComponent implements OnInit {
     private authService: AuthService,
     private alertController: AlertController,
     private toastController: ToastController,
-    private recompensasService: RecompensasService
+    private recompensasService: RecompensasService,
+    private modalController: ModalController,
+    private qrService: QRService
   ) {}
 
   ngOnInit() {
     this.cargarMisArticulos();
+    this.cargarHistorialTrueques();
   }
 
   ionViewWillEnter() {
     this.cargarMisArticulos();
+    this.cargarHistorialTrueques();
   }
 
   cargarMisArticulos() {
@@ -40,6 +52,62 @@ export class MisTruequesComponent implements OnInit {
     if (usuarioActual) {
       this.misArticulos = this.articulosService.getArticulosPorUsuario(usuarioActual.id);
     }
+  }
+
+  async cargarHistorialTrueques() {
+    const usuarioActual = this.authService.getUsuarioActualSync();
+    if (!usuarioActual) return;
+
+    this.cargandoHistorial = true;
+
+    try {
+      // Cargar historial y estadísticas en paralelo
+      const [historial, estadisticas] = await Promise.all([
+        this.qrService.obtenerHistorialTrueques(usuarioActual.id),
+        this.qrService.obtenerEstadisticasTrueques(usuarioActual.id)
+      ]);
+
+      this.historialTrueques = historial;
+      this.estadisticas = estadisticas;
+
+      console.log(`✅ Historial cargado: ${historial.length} trueques`);
+      console.log(`📊 Estadísticas:`, estadisticas);
+    } catch (error) {
+      console.error('❌ Error cargando historial:', error);
+      this.mostrarToast('Error al cargar el historial de trueques', 'danger');
+    } finally {
+      this.cargandoHistorial = false;
+    }
+  }
+
+  // Métodos auxiliares para el historial
+  getRolDisplay(permuta: PermutaCompletada): string {
+    return permuta.rolUsuario === 'vendedor' ? 'Vendiste' : 'Compraste';
+  }
+
+  getOtroUsuario(permuta: PermutaCompletada): string {
+    return permuta.rolUsuario === 'vendedor'
+      ? permuta.compradorNombre
+      : permuta.vendedorNombre;
+  }
+
+  getPuntosGanados(permuta: PermutaCompletada): number {
+    return permuta.rolUsuario === 'vendedor'
+      ? permuta.puntosOtorgados?.vendedor || 0
+      : permuta.puntosOtorgados?.comprador || 0;
+  }
+
+  formatearFecha(fecha: Date): string {
+    const ahora = new Date();
+    const diffMs = ahora.getTime() - fecha.getTime();
+    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDias === 0) return 'Hoy';
+    if (diffDias === 1) return 'Ayer';
+    if (diffDias < 7) return `Hace ${diffDias} días`;
+    if (diffDias < 30) return `Hace ${Math.floor(diffDias / 7)} semanas`;
+    if (diffDias < 365) return `Hace ${Math.floor(diffDias / 30)} meses`;
+    return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   volver() {
@@ -52,45 +120,15 @@ export class MisTruequesComponent implements OnInit {
     }
   }
 
-  async marcarComoPermutado(articulo: Articulo) {
-    const alert = await this.alertController.create({
-      header: 'Confirmar',
-      message: `¿Marcar "${articulo.nombre}" como permutado?`,
-      buttons: [
-        {
-          text: 'Cancelar',
-          role: 'cancel'
-        },
-        {
-          text: 'Confirmar',
-          handler: async () => {
-            try {
-              // Marcar artículo como permutado
-              await this.articulosService.cambiarDisponibilidad(articulo.id || '', false);
-
-              // Incrementar contador de trueques realizados
-              this.authService.incrementarTruequeRealizados();
-
-              // Otorgar puntos por el trueque
-              const puntosGanados = this.recompensasService.otorgarPuntosPorTrueque(articulo.id || '');
-
-              // Verificar y desbloquear insignias según trueques realizados
-              this.verificarInsigniasPorTrueques();
-
-              // Recargar artículos
-              this.cargarMisArticulos();
-
-              // Mostrar notificación con puntos ganados
-              this.mostrarToast(`✅ ¡Trueque completado! +${puntosGanados} puntos`);
-            } catch (error) {
-              this.mostrarToast('❌ Error al actualizar el artículo', 'danger');
-            }
-          }
-        }
-      ]
+  async generarQRPermuta(articulo: any) {
+    const modal = await this.modalController.create({
+      component: QRGeneratorComponent,
+      componentProps: {
+        articuloId: articulo.id,
+        articuloNombre: articulo.nombre
+      }
     });
-
-    await alert.present();
+    await modal.present();
   }
 
   async marcarComoDisponible(articulo: Articulo) {

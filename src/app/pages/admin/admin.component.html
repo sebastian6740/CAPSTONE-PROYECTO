@@ -143,11 +143,11 @@
       </div>
 
       <div class="card-actions approval-actions">
-        <ion-button expand="block" color="success" (click)="aprobarArticulo(articulo)" [disabled]="procesando">
+        <ion-button expand="block" color="success" (click)="aprobarArticulo(articulo)" [disabled]="estaArticuloProcesando(articulo.id)">
           <ion-icon name="checkmark-circle" slot="start"></ion-icon>
-          Aprobar Artículo
+          {{ estaArticuloProcesando(articulo.id) ? 'Procesando...' : 'Aprobar Artículo' }}
         </ion-button>
-        <ion-button expand="block" color="danger" fill="outline" (click)="rechazarArticulo(articulo)" [disabled]="procesando">
+        <ion-button expand="block" color="danger" fill="outline" (click)="rechazarArticulo(articulo)" [disabled]="estaArticuloProcesando(articulo.id)">
           <ion-icon name="close-circle" slot="start"></ion-icon>
           Rechazar y Eliminar
         </ion-button>

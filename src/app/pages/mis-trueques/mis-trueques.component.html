@@ -7,22 +7,38 @@
     </ion-buttons>
     <ion-title>Mis Trueques</ion-title>
   </ion-toolbar>
+
+  <!-- Tabs de navegación -->
+  <ion-toolbar>
+    <ion-segment [(ngModel)]="vistaActual">
+      <ion-segment-button value="articulos">
+        <ion-label>Mis Artículos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="historial">
+        <ion-label>Historial</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <!-- Estado vacío -->
-  <div *ngIf="misArticulos.length === 0" class="empty-state">
-    <ion-icon name="cube-outline"></ion-icon>
-    <h3>No has publicado artículos</h3>
-    <p>Publica tu primer artículo para empezar a intercambiar</p>
-    <ion-button expand="block" color="primary" (click)="publicarArticulo()">
-      <ion-icon name="add-circle" slot="start"></ion-icon>
-      Publicar artículo
-    </ion-button>
-  </div>
+  <!-- ============================================ -->
+  <!-- VISTA: MIS ARTÍCULOS -->
+  <!-- ============================================ -->
+  <div *ngIf="vistaActual === 'articulos'">
+    <!-- Estado vacío -->
+    <div *ngIf="misArticulos.length === 0" class="empty-state">
+      <ion-icon name="cube-outline"></ion-icon>
+      <h3>No has publicado artículos</h3>
+      <p>Publica tu primer artículo para empezar a intercambiar</p>
+      <ion-button expand="block" color="primary" (click)="publicarArticulo()">
+        <ion-icon name="add-circle" slot="start"></ion-icon>
+        Publicar artículo
+      </ion-button>
+    </div>
 
-  <!-- Lista de artículos -->
-  <div *ngIf="misArticulos.length > 0" class="articulos-list">
+    <!-- Lista de artículos -->
+    <div *ngIf="misArticulos.length > 0" class="articulos-list">
     <div *ngFor="let articulo of misArticulos" class="articulo-card">
       <!-- Imagen del artículo -->
       <div class="articulo-imagen">
@@ -62,12 +78,12 @@
 
         <ion-button
           *ngIf="articulo.disponible"
-          color="danger"
+          color="primary"
           size="small"
-          (click)="marcarComoPermutado(articulo)"
+          (click)="generarQRPermuta(articulo)"
           expand="block">
-          <ion-icon name="close-circle" slot="start"></ion-icon>
-          Marcar como permutado
+          <ion-icon name="qr-code" slot="start"></ion-icon>
+          Generar QR
         </ion-button>
 
         <ion-button
@@ -88,6 +104,100 @@
           <ion-icon name="trash-outline" slot="start"></ion-icon>
           Eliminar
         </ion-button>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- VISTA: HISTORIAL DE TRUEQUES -->
+  <!-- ============================================ -->
+  <div *ngIf="vistaActual === 'historial'">
+    <!-- Estadísticas -->
+    <div *ngIf="estadisticas" class="estadisticas-container">
+      <h2>Estadísticas</h2>
+      <div class="estadisticas-grid">
+        <div class="stat-card">
+          <ion-icon name="swap-horizontal"></ion-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ estadisticas.totalTrueques }}</span>
+            <span class="stat-label">Total trueques</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <ion-icon name="arrow-up-circle"></ion-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ estadisticas.comoVendedor }}</span>
+            <span class="stat-label">Como vendedor</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <ion-icon name="arrow-down-circle"></ion-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ estadisticas.comoComprador }}</span>
+            <span class="stat-label">Como comprador</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <ion-icon name="trophy"></ion-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ estadisticas.puntosGanadosTotal }}</span>
+            <span class="stat-label">Puntos ganados</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="cargandoHistorial" class="loading-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Cargando historial...</p>
+    </div>
+
+    <!-- Estado vacío -->
+    <div *ngIf="!cargandoHistorial && historialTrueques.length === 0" class="empty-state">
+      <ion-icon name="time-outline"></ion-icon>
+      <h3>Sin trueques completados</h3>
+      <p>Cuando completes tu primer trueque aparecerá aquí</p>
+    </div>
+
+    <!-- Lista de trueques -->
+    <div *ngIf="!cargandoHistorial && historialTrueques.length > 0" class="historial-list">
+      <h2>Historial de trueques</h2>
+
+      <div *ngFor="let permuta of historialTrueques" class="permuta-card"
+           [class.vendedor]="permuta.rolUsuario === 'vendedor'"
+           [class.comprador]="permuta.rolUsuario === 'comprador'">
+
+        <!-- Icono según rol -->
+        <div class="permuta-icon">
+          <ion-icon [name]="permuta.rolUsuario === 'vendedor' ? 'arrow-up-circle' : 'arrow-down-circle'"></ion-icon>
+        </div>
+
+        <!-- Info del trueque -->
+        <div class="permuta-info">
+          <div class="permuta-header">
+            <span class="rol-badge" [class.vendedor]="permuta.rolUsuario === 'vendedor'">
+              {{ getRolDisplay(permuta) }}
+            </span>
+            <span class="fecha">{{ formatearFecha(permuta.fechaCompletada) }}</span>
+          </div>
+
+          <h3 class="articulo-nombre">{{ permuta.articuloNombre }}</h3>
+
+          <div class="otro-usuario">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>{{ getOtroUsuario(permuta) }}</span>
+          </div>
+
+          <div class="puntos-ganados">
+            <ion-icon name="trophy"></ion-icon>
+            <span>+{{ getPuntosGanados(permuta) }} puntos</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

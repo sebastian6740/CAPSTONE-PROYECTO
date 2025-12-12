@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
@@ -12,6 +12,7 @@ import { ConversacionConDetalles } from '../../core/models/mensaje.model';
   standalone: true,
   templateUrl: './mensajes.component.html',
   styleUrls: ['./mensajes.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   imports: [CommonModule, IonicModule]
 })
 export class MensajesComponent implements OnInit, OnDestroy {

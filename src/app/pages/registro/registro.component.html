@@ -14,13 +14,10 @@
   </div>
 
   <p class="login-subtitle">Crea tu cuenta y comienza a intercambiar</p>
-    <div class="container-formulario">
-  <!-- Formulario -->
-  <form [formGroup]="formularioRegistro" (ngSubmit)="registrarse()" class="registro-form">
+  <div class="container-formulario">
+    <form [formGroup]="formularioRegistro" (ngSubmit)="registrarse()" class="registro-form">
 
-  
-    <!-- Nombre -->
-
+      <!-- Nombre -->
       <ion-label position="" class="ion-label">Nombre completo</ion-label>
       <ion-item class="registro-item" lines="none">
         <ion-input 
@@ -32,11 +29,9 @@
       <div class="error-message" *ngIf="formularioRegistro.get('nombre')?.invalid && formularioRegistro.get('nombre')?.touched">
         {{ obtenerErrorNombre() }}
       </div>
-    
 
-    <!-- Email -->
-  
-      <ion-label position ="">Email</ion-label>
+      <!-- Email -->
+      <ion-label position="">Email</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
           type="email" 
@@ -47,25 +42,23 @@
       <div class="error-message" *ngIf="formularioRegistro.get('email')?.invalid && formularioRegistro.get('email')?.touched">
         {{ obtenerErrorEmail() }}
       </div>
-  
 
-    <!-- Teléfono -->
-    
+      <!-- Teléfono -->
       <ion-label position="">Teléfono</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
           type="tel" 
           formControlName="telefono"
-          placeholder="Ej: +56912345678">
+          placeholder="Ej: +569 23232323"
+          maxlength="15"
+          pattern="[0-9+\s]*">
         </ion-input>
       </ion-item>
       <div class="error-message" *ngIf="formularioRegistro.get('telefono')?.invalid && formularioRegistro.get('telefono')?.touched">
         {{ obtenerErrorTelefono() }}
       </div>
-    
 
-    <!-- Ciudad -->
-
+      <!-- Ciudad -->
       <ion-label position="">Ciudad</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-select
@@ -91,10 +84,8 @@
           <ion-select-option value="Punta Arenas">Punta Arenas</ion-select-option>
         </ion-select>
       </ion-item>
-   
 
-    <!-- Contraseña -->
- 
+      <!-- Contraseña -->
       <ion-label position="">Contraseña</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
@@ -106,16 +97,15 @@
           slot="end" 
           [name]="mostrarContrasena ? 'eye' : 'eye-off'"
           (click)="toggleContrasena()"
-          class="toggle-password-icon">
+          class="toggle-password-icon"
+          style="cursor: pointer;">
         </ion-icon>
       </ion-item>
       <div class="error-message" *ngIf="formularioRegistro.get('contrasena')?.invalid && formularioRegistro.get('contrasena')?.touched">
         {{ obtenerErrorContrasena() }}
       </div>
- 
 
-    <!-- Confirmar Contraseña -->
-   
+      <!-- Confirmar Contraseña -->
       <ion-label position="">Confirmar Contraseña</ion-label>
       <ion-item class="login-item" lines="none">
         <ion-input 
@@ -127,44 +117,50 @@
           slot="end" 
           [name]="mostrarConfirmarContrasena ? 'eye' : 'eye-off'"
           (click)="toggleConfirmarContrasena()"
-          class="toggle-password-icon">
+          class="toggle-password-icon"
+          style="cursor: pointer;">
         </ion-icon>
       </ion-item>
       <div class="error-message" *ngIf="formularioRegistro.get('confirmarContrasena')?.invalid && formularioRegistro.get('confirmarContrasena')?.touched">
         Las contraseñas no coinciden
       </div>
-   
 
-    <!-- Términos y condiciones -->
-
-      <ion-item lines="none" class=" terminos-item">
-        <ion-checkbox slot="start" formControlName="terminos"></ion-checkbox>
-        <ion-label>Acepto términos y condiciones</ion-label>
+      <!-- Términos y Condiciones -->
+      <ion-item class="login-item" lines="none" style="margin-top: 15px; --background: transparent;">
+        <ion-checkbox
+          formControlName="terminos"
+          slot="start"
+          style="margin-right: 10px;">
+        </ion-checkbox>
+        <ion-label style="font-size: 14px; white-space: normal;">
+          Acepto los <a href="#" style="color: var(--ion-color-primary); text-decoration: underline;">términos y condiciones</a>
+        </ion-label>
       </ion-item>
       <div class="error-message" *ngIf="formularioRegistro.get('terminos')?.invalid && formularioRegistro.get('terminos')?.touched">
         Debes aceptar los términos y condiciones
       </div>
- 
 
-    <!-- Botón Registrar -->
-    <ion-button 
-      expand="block" 
-      type="submit"
-      [disabled]="cargando || formularioRegistro.invalid"
-      class="login-btn ion-margin-top ion-margin-bottom">
-      <ion-spinner *ngIf="cargando" name="crescent"></ion-spinner>
-      {{ cargando ? 'Registrando...' : 'Crear Cuenta' }}
-    </ion-button>
+      <!-- Botón Registrar -->
+      <ion-button 
+        expand="block" 
+        type="submit"
+        [disabled]="cargando"
+        class="login-btn ion-margin-top ion-margin-bottom">
+        <ion-spinner *ngIf="cargando" name="crescent"></ion-spinner>
+        {{ cargando ? 'Registrando...' : 'Crear Cuenta' }}
+      </ion-button>
 
-    <!-- Link al Login -->
-    <div class="registro-link">
-      <p>¿Ya tienes cuenta? 
-        <ion-text  (click)="irAlLogin()">
-    
-          Inicia sesión aquí
-        </ion-text>
-      </p>
-    </div>
-  </form>
+      <!-- Link al Login -->
+      <div class="registro-link">
+        <p>¿Ya tienes cuenta? 
+          <ion-text (click)="irAlLogin()">
+            Inicia sesión aquí
+          </ion-text>
+        </p>
+      </div>
+    </form>
   </div>
+
+  <!-- Contenedor invisible para reCAPTCHA de Firebase -->
+  <div id="recaptcha-container"></div>
 </ion-content>

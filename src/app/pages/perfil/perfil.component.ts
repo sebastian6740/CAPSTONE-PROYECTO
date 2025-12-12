@@ -1,18 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IonicModule, ToastController, AlertController, ActionSheetController, LoadingController } from '@ionic/angular';
+import { IonicModule, ToastController, AlertController, ActionSheetController, LoadingController, ModalController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { AuthService } from '../../core/services/auth.service';
 import { Usuario } from '../../core/models/user.model';
 import { RecompensasService } from '../../core/services/recompensas.service';
 import { EstadisticasPuntos } from '../../core/models/recompensas.model';
+import { SuscripcionService } from '../../core/services/suscripcion.service';
+import { TerminosModalComponent } from '../../components/terminos-modal/terminos-modal.component';
 
 @Component({
   selector: 'app-perfil',
   templateUrl: './perfil.component.html',
   styleUrls: ['./perfil.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, IonicModule]
 })
@@ -42,6 +45,15 @@ export class PerfilComponent implements OnInit {
     { nombre: 'Experto', emoji: '💎', id: 'experto' }
   ];
 
+  // Suscripción
+  esSuscriptor: boolean = false;
+  infoSuscripcion: any = {
+    esSuscriptor: false,
+    plan: 'gratis',
+    diasRestantes: 0,
+    fechaVencimiento: null
+  };
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -50,17 +62,21 @@ export class PerfilComponent implements OnInit {
     private alertController: AlertController,
     private actionSheetController: ActionSheetController,
     private loadingController: LoadingController,
-    private recompensasService: RecompensasService
+    private recompensasService: RecompensasService,
+    private suscripcionService: SuscripcionService,
+    private modalController: ModalController
   ) {}
 
   ngOnInit() {
     this.cargarDatos();
     this.verificarFoto();
     this.cargarPuntos();
+    this.cargarInfoSuscripcion();
   }
 
   ionViewWillEnter() {
     this.cargarPuntos();
+    this.cargarInfoSuscripcion();
   }
 
   cargarDatos() {
@@ -75,13 +91,83 @@ export class PerfilComponent implements OnInit {
     this.diasParaFoto = this.authService.diasParaActualizarFoto();
   }
 
+  /**
+   * Validador personalizado para teléfono:
+   * - Debe tener formato +569 seguido de 8 dígitos (con o sin espacio)
+   */
+  validarTelefono(control: any): { [key: string]: any } | null {
+    const valor = control.value;
+
+    if (!valor) {
+      return null;
+    }
+
+    // Permitir +569 con 8 dígitos, con o sin espacios
+    const regex = /^\+569\s?\d{8}$/;
+    if (!regex.test(valor)) {
+      return { formatoTelefono: true };
+    }
+
+    return null;
+  }
+
+  /**
+   * Validador personalizado para biografía:
+   * - Si está vacía, es válida (opcional)
+   * - Si tiene contenido, debe tener mínimo 30 y máximo 200 caracteres
+   */
+  validarBiografia(control: any): { [key: string]: any } | null {
+    const valor = control.value;
+
+    // Si está vacío, es válido (biografía es opcional)
+    if (!valor || valor.trim().length === 0) {
+      return null;
+    }
+
+    const longitud = valor.trim().length;
+
+    // Si tiene contenido, validar mínimo y máximo
+    if (longitud < 30) {
+      return { minlength: { requiredLength: 30, actualLength: longitud } };
+    }
+
+    if (longitud > 200) {
+      return { maxlength: { requiredLength: 200, actualLength: longitud } };
+    }
+
+    return null;
+  }
+
   inicializarFormulario() {
     if (this.usuario) {
       this.formularioEdicion = this.fb.group({
         nombre: [this.usuario.nombre, [Validators.required, Validators.minLength(3)]],
-        telefono: [this.usuario.telefono, [Validators.required, Validators.pattern(/^\d{7,}$/)]],
+        telefono: [this.usuario.telefono, [Validators.required, this.validarTelefono.bind(this)]],
         ciudad: [this.usuario.ciudad, Validators.required],
-        biografia: [this.usuario.biografia || '', Validators.maxLength(200)]
+        biografia: [this.usuario.biografia || '', [this.validarBiografia.bind(this)]]
+      });
+
+      // Debug: Log form initialization
+      console.log('📝 Formulario inicializado con valores:', this.formularioEdicion.value);
+      console.log('📝 Formulario válido:', this.formularioEdicion.valid);
+
+      // Log individual field errors
+      Object.keys(this.formularioEdicion.controls).forEach(key => {
+        const control = this.formularioEdicion.get(key);
+        if (control?.invalid) {
+          console.log(`❌ Campo '${key}' inválido:`, control.errors);
+        }
+      });
+
+      // Subscribe to form changes to debug
+      this.formularioEdicion.valueChanges.subscribe(() => {
+        console.log('📝 Formulario cambió. Válido:', this.formularioEdicion.valid);
+        Object.keys(this.formularioEdicion.controls).forEach(key => {
+          const control = this.formularioEdicion.get(key);
+          if (control?.invalid) {
+            console.log(`❌ Campo '${key}' inválido:`, control.errors);
+          }
+        });
       });
     }
   }
@@ -130,10 +216,14 @@ export class PerfilComponent implements OnInit {
    * Abrir ActionSheet para elegir entre cámara o galería
    */
   async cambiarFoto() {
-    if (!this.puedeActualizarFoto) {
+    // Verificar en tiempo real si puede actualizar foto
+    const puedeActualizar = this.authService.puedeActualizarFoto();
+    const diasRestantes = this.authService.diasParaActualizarFoto();
+
+    if (!puedeActualizar) {
       const alert = await this.alertController.create({
         header: 'Límite de cambios',
-        message: `Podrás cambiar tu foto nuevamente en ${this.diasParaFoto} días. Esto ayuda a mantener la confianza en la comunidad.`,
+        message: `Podrás cambiar tu foto nuevamente en ${diasRestantes} días. Esto ayuda a mantener la confianza en la comunidad.`,
         buttons: ['Entendido']
       });
       await alert.present();
@@ -318,8 +408,10 @@ export class PerfilComponent implements OnInit {
           text: 'Cerrar sesión',
           role: 'destructive',
           handler: () => {
-            this.authService.logout();
-            this.router.navigate(['/login']);
+            this.authService.logout().subscribe(() => {
+              console.log('✅ Sesión cerrada correctamente');
+              this.router.navigate(['/login'], { replaceUrl: true });
+            });
           }
         }
       ]
@@ -433,11 +525,56 @@ export class PerfilComponent implements OnInit {
     });
   }
 
+  // ============================================
+  // MÉTODOS DE SUSCRIPCIÓN
+  // ============================================
+
+  async cargarInfoSuscripcion() {
+    this.infoSuscripcion = await this.suscripcionService.obtenerInfoSuscripcion();
+    this.esSuscriptor = this.infoSuscripcion.esSuscriptor;
+  }
+
+  async cancelarSuscripcion() {
+    const alert = await this.alertController.create({
+      header: '¿Cancelar suscripción?',
+      message: 'Se te cobrarán por cada artículo después de la primera publicación gratuita. ¿Deseas continuar?',
+      buttons: [
+        {
+          text: 'No, mantener',
+          role: 'cancel'
+        },
+        {
+          text: 'Sí, cancelar',
+          handler: async () => {
+            const exito = await this.suscripcionService.cancelarSuscripcion();
+            if (exito) {
+              const alertExito = await this.alertController.create({
+                header: 'Suscripción cancelada',
+                message: 'Tu suscripción ha sido cancelada exitosamente.',
+                buttons: ['OK']
+              });
+              await alertExito.present();
+              await this.cargarInfoSuscripcion();
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
   irARecompensas() {
     this.router.navigate(['/recompensas']);
   }
 
-  irAHistorialPuntos() {
-    this.router.navigate(['/historial-puntos']);
+  async verTerminosYCondiciones() {
+    const modal = await this.modalController.create({
+      component: TerminosModalComponent,
+      componentProps: {
+        soloLectura: true
+      }
+    });
+
+    await modal.present();
   }
 }

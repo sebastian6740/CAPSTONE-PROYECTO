@@ -1,0 +1,25 @@
+// Usar estilos base del login
+@use '../login/login.component.scss';
+
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+
+  ion-icon {
+    font-size: 18px;
+  }
+}
+
+.login-subtitle {
+  strong {
+    color: var(--ion-color-primary);
+    font-size: 1.1em;
+  }
+}

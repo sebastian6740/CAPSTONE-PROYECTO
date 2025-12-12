@@ -1,14 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonicModule, ToastController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
+import { PhoneVerificationService } from '../../core/services/phone-verification.service';
 
 @Component({
   selector: 'app-registro',
   templateUrl: './registro.component.html',
   styleUrls: ['./registro.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, IonicModule]
 })
@@ -22,14 +24,15 @@ mostrarConfirmarContrasena = false;
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private phoneService: PhoneVerificationService
   ) {}
 
   ngOnInit() {
     this.formularioRegistro = this.fb.group({
       nombre: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
-      telefono: ['', [Validators.required, Validators.pattern(/^\d{7,}$/)]],
+      telefono: ['', [Validators.required, Validators.pattern(/^\+?[0-9]{10,15}$/)]],
       ciudad: ['', Validators.required],
       contrasena: ['', [Validators.required, Validators.minLength(6)]],
       confirmarContrasena: ['', Validators.required],
@@ -37,9 +40,55 @@ mostrarConfirmarContrasena = false;
     });
   }
 
-  registrarse() {
-    if (this.formularioRegistro.invalid) {
-      this.mostrarMensaje('Por favor completa todos los campos correctamente', 'warning');
+  async registrarse() {
+    // Validar campos específicos y mostrar mensajes claros
+    if (this.formularioRegistro.get('nombre')?.invalid) {
+      this.mostrarMensaje('El nombre debe tener al menos 3 caracteres', 'warning');
+      return;
+    }
+
+    if (this.formularioRegistro.get('email')?.invalid) {
+      this.mostrarMensaje('Ingresa un email válido', 'warning');
+      return;
+    }
+
+    if (this.formularioRegistro.get('telefono')?.invalid) {
+      this.mostrarMensaje('El teléfono debe tener entre 10-15 dígitos', 'warning');
+      return;
+    }
+
+    if (this.formularioRegistro.get('ciudad')?.invalid) {
+      this.mostrarMensaje('Selecciona una ciudad', 'warning');
+      return;
+    }
+
+    if (this.formularioRegistro.get('contrasena')?.invalid) {
+      this.mostrarMensaje('La contraseña debe tener al menos 6 caracteres', 'warning');
+      return;
+    }
+
+    if (this.formularioRegistro.get('confirmarContrasena')?.invalid) {
+      this.mostrarMensaje('Confirma tu contraseña', 'warning');
+      return;
+    }
+
+    // Validar que las contraseñas coincidan
+    const contrasena = this.formularioRegistro.get('contrasena')?.value;
+    const confirmarContrasena = this.formularioRegistro.get('confirmarContrasena')?.value;
+    if (contrasena !== confirmarContrasena) {
+      this.mostrarMensaje('Las contraseñas no coinciden', 'warning');
+      return;
+    }
+
+    if (this.formularioRegistro.get('terminos')?.value !== true) {
+      this.mostrarMensaje('Debes aceptar los términos y condiciones', 'warning');
+      return;
+    }
+
+    // Validar formato del teléfono
+    const telefono = this.formularioRegistro.value.telefono;
+    if (!this.phoneService.validarTelefono(telefono)) {
+      this.mostrarMensaje('Formato de teléfono inválido. Debe tener entre 10-15 dígitos', 'warning');
       return;
     }
 
@@ -47,26 +96,47 @@ mostrarConfirmarContrasena = false;
     console.log('🚀 Iniciando proceso de registro...');
 
     this.authService.registrar(this.formularioRegistro.value).subscribe({
-      next: (resultado) => {
-        this.cargando = false;
+      next: async (resultado) => {
         console.log('📬 Resultado del registro:', resultado);
 
         if (resultado.exito) {
-          console.log('✅ Registro exitoso, redirigiendo al home...');
-          this.mostrarMensaje('¡Registro exitoso! Bienvenido', 'success');
-          setTimeout(() => {
-            this.router.navigate(['/home']);
-          }, 1500);
+          console.log('✅ Registro exitoso, iniciando verificación de teléfono...');
+
+          try {
+            // Inicializar reCAPTCHA
+            this.phoneService.inicializarRecaptcha();
+
+            // Enviar código de verificación por SMS (GRATIS con Firebase)
+            const enviado = await this.phoneService.enviarCodigoVerificacion(telefono);
+
+            this.cargando = false;
+
+            if (enviado) {
+              this.mostrarMensaje('Código de verificación enviado a tu teléfono', 'success');
+
+              // Navegar a la pantalla de verificación con los datos
+              setTimeout(() => {
+                this.router.navigate(['/verificar-telefono'], {
+                  state: {
+                    telefono: telefono,
+                    email: this.formularioRegistro.value.email,
+                    password: this.formularioRegistro.value.contrasena
+                  }
+                });
+              }, 1000);
+            }
+          } catch (error: any) {
+            this.cargando = false;
+            console.error('Error enviando SMS:', error);
+            this.mostrarMensaje(error.message || 'Error al enviar SMS de verificación', 'danger');
+          }
         } else {
+          this.cargando = false;
           console.error('❌ Registro falló:', resultado.mensaje);
-          // Mostrar mensaje principal
           this.mostrarMensaje(resultado.mensaje, 'danger');
 
-          // Si hay detalle de error, mostrarlo en consola y opcionalmente en un segundo mensaje
           if ((resultado as any).detalleError) {
             console.error('📋 Detalle del error:', (resultado as any).detalleError);
-
-            // Si el error es de configuración, mostrar mensaje adicional
             if ((resultado as any).detalleError.includes('Firestore') || (resultado as any).detalleError.includes('CONFIGURAR')) {
               setTimeout(() => {
                 this.mostrarMensaje('⚠️ ' + (resultado as any).detalleError, 'warning', 5000);

@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, NgZone, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ActionSheetController, LoadingController, AlertController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { MensajesService } from '../../core/services/mensajes.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -14,6 +14,7 @@ import { Usuario } from '../../core/models/user.model';
   standalone: true,
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   imports: [CommonModule, FormsModule, IonicModule]
 })
 export class ChatComponent implements OnInit, OnDestroy {
@@ -33,7 +34,10 @@ export class ChatComponent implements OnInit, OnDestroy {
     private router: Router,
     private mensajesService: MensajesService,
     private authService: AuthService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private actionSheetController: ActionSheetController,
+    private loadingController: LoadingController,
+    private alertController: AlertController
   ) {}
 
   ngOnInit() {
@@ -201,5 +205,160 @@ export class ChatComponent implements OnInit, OnDestroy {
   abrirPerfilUsuario() {
     // Podrías implementar navegación al perfil del otro usuario
     console.log('Abrir perfil de', this.otroUsuario?.nombre);
+  }
+
+  // Mostrar opciones para enviar foto (cámara o galería)
+  async mostrarOpcionesFoto() {
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Enviar foto',
+      buttons: [
+        {
+          text: 'Tomar foto',
+          icon: 'camera',
+          handler: () => {
+            this.tomarFoto();
+          }
+        },
+        {
+          text: 'Elegir de galería',
+          icon: 'images',
+          handler: () => {
+            this.seleccionarDeGaleria();
+          }
+        },
+        {
+          text: 'Cancelar',
+          icon: 'close',
+          role: 'cancel'
+        }
+      ]
+    });
+    await actionSheet.present();
+  }
+
+  // Tomar foto con la cámara
+  async tomarFoto() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';  // Usar cámara trasera
+
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        await this.procesarFoto(file);
+      }
+    };
+
+    input.click();
+  }
+
+  // Seleccionar foto de la galería
+  async seleccionarDeGaleria() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/jpg';
+
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        await this.procesarFoto(file);
+      }
+    };
+
+    input.click();
+  }
+
+  // Procesar y enviar foto
+  private async procesarFoto(file: File) {
+    // Validar tamaño (5MB máximo)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      const alert = await this.alertController.create({
+        header: 'Archivo muy grande',
+        message: 'La foto no puede superar 5MB. Por favor selecciona una imagen más pequeña.',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
+
+    // Validar tipo
+    if (!file.type.startsWith('image/')) {
+      const alert = await this.alertController.create({
+        header: 'Tipo de archivo inválido',
+        message: 'Por favor selecciona una imagen válida (JPG, PNG).',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
+
+    // Leer archivo como base64
+    const reader = new FileReader();
+    reader.onload = async (event: any) => {
+      const base64 = event.target.result;
+
+      // Obtener dimensiones de la imagen
+      const img = new Image();
+      img.onload = async () => {
+        await this.enviarFotoConMetadata(base64, {
+          nombre: file.name,
+          tamanio: file.size,
+          ancho: img.width,
+          alto: img.height
+        });
+      };
+      img.src = base64;
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  // Enviar foto con metadata
+  private async enviarFotoConMetadata(
+    base64: string,
+    metadata: { nombre: string; tamanio: number; ancho?: number; alto?: number }
+  ) {
+    const loading = await this.loadingController.create({
+      message: 'Enviando foto...',
+      spinner: 'crescent'
+    });
+    await loading.present();
+
+    try {
+      await this.mensajesService.enviarFotoMensaje(
+        this.conversacionId,
+        base64,
+        '', // Sin caption por ahora
+        metadata
+      );
+
+      console.log('✅ Foto enviada correctamente');
+      await loading.dismiss();
+
+      // Scroll al final
+      setTimeout(() => this.scrollToBottom(), 300);
+    } catch (error) {
+      await loading.dismiss();
+      console.error('❌ Error al enviar foto:', error);
+
+      const alert = await this.alertController.create({
+        header: 'Error',
+        message: 'No se pudo enviar la foto. Por favor intenta de nuevo.',
+        buttons: ['OK']
+      });
+      await alert.present();
+    }
+  }
+
+  // Verificar si un mensaje es foto
+  esMensajeFoto(mensaje: Mensaje): boolean {
+    return mensaje.tipo === 'foto';
+  }
+
+  // Obtener URL de la foto
+  obtenerFotoUrl(mensaje: Mensaje): string | undefined {
+    return mensaje.fotoUrl;
   }
 }

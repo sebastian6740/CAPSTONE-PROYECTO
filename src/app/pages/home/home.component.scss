@@ -28,24 +28,26 @@ ion-content {
 
 
 
-.header-title h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-  color: white;
+.header-title {
   display: flex;
-  margin-top: 8px;
-  margin-bottom: 6px;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-
-}
-
-.header-title p {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  gap: 8px;
+  width: 100%;
   text-align: center;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.8;
+  }
 }
 
 .search-bar {
@@ -264,13 +266,20 @@ ion-button {
   justify-content: center;
 }
 
-.logo-img {
-  width: 70px;
-  height: auto;
-  margin: 6px auto 4px;
+.logo-header {
+  display: flex;
   align-items: center;
   justify-content: center;
-  display: flex;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.logo-img {
+  height: 40px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 // Mensaje sin artículos
@@ -542,4 +551,36 @@ ion-button {
 .puntos-widget {
   position: relative;
   z-index: 1;
+}
+
+/* Estilos para el banner en home */
+.banner-home-suscripcion {
+  margin: 16px;
+  margin-bottom: 20px;
+}
+
+.banner-card-content {
+  text-align: center;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner-card-content ion-icon {
+  font-size: 48px;
+  color: var(--ion-color-light);
+}
+
+.banner-card-content h3 {
+  margin: 8px 0;
+  color: var(--ion-color-light);
+  font-size: 18px;
+}
+
+.banner-card-content p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
 }

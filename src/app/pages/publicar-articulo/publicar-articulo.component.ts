@@ -1,18 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
+import { IonicModule, ActionSheetController, AlertController, ModalController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Preferences } from '@capacitor/preferences';
 import { ArticulosService, Articulo } from '../../core/services/articulos';
+import { SuscripcionService } from '../../core/services/suscripcion.service';
 
 @Component({
   selector: 'app-publicar-articulo',
   standalone: true,
   templateUrl: './publicar-articulo.component.html',
   styleUrls: ['./publicar-articulo.component.scss'],
-  imports: [IonicModule, CommonModule, FormsModule]
+  encapsulation: ViewEncapsulation.None,
+  imports: [IonicModule, CommonModule, FormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class PublicarArticuloComponent implements OnInit {
 
@@ -23,6 +26,13 @@ export class PublicarArticuloComponent implements OnInit {
     categoria: '',
     fotos: []
   };
+
+  // Propiedades para control de publicaciones
+  ultimaPublicacion: number = 0;
+  esSuscriptor: boolean = false;
+  puedePublicar: boolean = true;
+  proximaPublicacionEn: string = '';
+  esFirstPublicacion: boolean = false;
 
   // Categorías disponibles
   categorias = [
@@ -38,11 +48,14 @@ export class PublicarArticuloComponent implements OnInit {
     private router: Router,
     private actionSheetController: ActionSheetController,
     private articulosService: ArticulosService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private suscripcionService: SuscripcionService,
+    private modalController: ModalController
   ) { }
 
   ngOnInit() {
     this.cargarArticuloBorrador();
+    this.verificarEstadoPublicacion();
   }
 
   // Volver a home
@@ -152,8 +165,83 @@ export class PublicarArticuloComponent implements OnInit {
     }
   }
 
+  // Verificar si el usuario puede publicar
+  async verificarEstadoPublicacion() {
+    try {
+      // Verificar suscripción en Firebase
+      this.esSuscriptor = await this.suscripcionService.esSuscriptorActivo();
+
+      // Obtener última publicación del storage local
+      const { value: ultimaPub } = await Preferences.get({ key: 'ultima_publicacion' });
+      this.ultimaPublicacion = ultimaPub ? parseInt(ultimaPub) : 0;
+
+      // Validar permisos
+      this.validarPermisoPublicacion();
+    } catch (error) {
+      console.error('Error al verificar estado de publicación:', error);
+    }
+  }
+
+  // Validar si puede publicar según reglas
+  private validarPermisoPublicacion() {
+    // Si es suscriptor, puede publicar ilimitadamente
+    if (this.esSuscriptor) {
+      this.puedePublicar = true;
+      this.proximaPublicacionEn = '';
+      return;
+    }
+
+    // Si nunca ha publicado, puede publicar gratis
+    if (this.ultimaPublicacion === 0) {
+      this.puedePublicar = true;
+      this.proximaPublicacionEn = '';
+      return;
+    }
+
+    // Verificar si pasaron 24 horas
+    const ahora = Date.now();
+    const horasTranscurridas = (ahora - this.ultimaPublicacion) / (1000 * 60 * 60);
+    const HORAS_ESPERA = 24;
+
+    if (horasTranscurridas >= HORAS_ESPERA) {
+      this.puedePublicar = true;
+      this.proximaPublicacionEn = '';
+    } else {
+      this.puedePublicar = false;
+      const horasRestantes = Math.ceil(HORAS_ESPERA - horasTranscurridas);
+      const minutosRestantes = Math.ceil((HORAS_ESPERA - horasTranscurridas) * 60);
+      this.proximaPublicacionEn = horasRestantes > 0 
+        ? `${horasRestantes}h` 
+        : `${minutosRestantes}m`;
+    }
+  }
+
   // Publicar artículo
   async publicarArticulo() {
+    // Verificar permisos antes de publicar
+    await this.verificarEstadoPublicacion();
+
+    if (!this.puedePublicar) {
+      const alert = await this.alertController.create({
+        header: 'No puedes publicar aún',
+        message: `Debes esperar ${this.proximaPublicacionEn} para la próxima publicación gratuita, o suscríbete para publicar ilimitadamente.`,
+        buttons: [
+          {
+            text: 'Suscribirme',
+            handler: () => {
+              this.router.navigate(['/suscripcion']);
+            }
+          },
+          {
+            text: 'Esperar',
+            role: 'cancel'
+          }
+        ]
+      });
+      await alert.present();
+      return;
+    }
+
     if (this.validarFormulario()) {
       try {
         console.log('Publicando artículo:', this.articulo);
@@ -161,25 +249,40 @@ export class PublicarArticuloComponent implements OnInit {
         // Guardar el artículo usando el servicio
         await this.articulosService.agregarArticulo(this.articulo);
 
+        // Verificar si es la primera publicación
+        this.esFirstPublicacion = this.ultimaPublicacion === 0;
+
+        // Guardar timestamp de publicación (solo si no es suscriptor)
+        if (!this.esSuscriptor) {
+          await Preferences.set({
+            key: 'ultima_publicacion',
+            value: Date.now().toString()
+          });
+        }
+
         // Limpiar el borrador
         await this.limpiarStorage();
 
-        // Mostrar mensaje de éxito con información de revisión
-        const alert = await this.alertController.create({
-          header: '¡Artículo publicado!',
-          message: 'Tu artículo ha sido publicado exitosamente y está siendo revisado por nuestro equipo de administración. Recibirás una notificación cuando sea aprobado.',
-          buttons: [
-            {
-              text: 'Entendido',
-              handler: () => {
-                // Volver al home
-                this.router.navigate(['/home']);
+        // Si es primera publicación y no es suscriptor, mostrar modal de suscripción
+        if (this.esFirstPublicacion && !this.esSuscriptor) {
+          await this.mostrarModalSuscripcion();
+        } else {
+          // Mostrar mensaje normal
+          const alert = await this.alertController.create({
+            header: '¡Artículo publicado!',
+            message: 'Tu artículo ha sido publicado exitosamente y está siendo revisado por nuestro equipo de administración. Recibirás una notificación cuando sea aprobado.',
+            buttons: [
+              {
+                text: 'Entendido',
+                handler: () => {
+                  this.router.navigate(['/home']);
+                }
               }
-            }
-          ],
-          backdropDismiss: false
-        });
-        await alert.present();
+            ],
+            backdropDismiss: false
+          });
+          await alert.present();
+        }
       } catch (error) {
         console.error('Error al publicar artículo:', error);
         const alertError = await this.alertController.create({
@@ -190,6 +293,41 @@ export class PublicarArticuloComponent implements OnInit {
         await alertError.present();
       }
     }
+  }
+
+  // Modal de invitación a suscripción
+  async mostrarModalSuscripcion() {
+    const alert = await this.alertController.create({
+      header: '🎉 ¡Felicidades!',
+      subHeader: 'Tu primer artículo fue publicado gratis',
+      message: `Ya completaste tu publicación gratuita. Para subir más artículos, tienes dos opciones:
+      
+      📌 Esperar 24 horas para tu próxima publicación gratuita
+      
+      ⭐ O suscríbete ahora para publicar ilimitadamente`,
+      buttons: [
+        {
+          text: 'Esperar 24h',
+          role: 'cancel',
+          handler: () => {
+            this.router.navigate(['/home']);
+          }
+        },
+        {
+          text: 'Suscribirme Ahora',
+          handler: () => {
+            this.router.navigate(['/suscripcion']);
+          }
+        }
+      ],
+      backdropDismiss: false
+    });
+    await alert.present();
+  }
+
+  // Ir a suscripción
+  irASuscripcion() {
+    this.router.navigate(['/suscripcion']);
   }
 
   // Validar formulario

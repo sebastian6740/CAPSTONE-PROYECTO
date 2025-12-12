@@ -233,6 +233,65 @@ ion-content {
   font-size: 16px;
 }
 
+// Banner de suscripci�n
+.banner-suscripcion {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 16px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    max-width: 100%;
+
+    .banner-text {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .banner-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .banner-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin: 0;
+      color: white;
+    }
+
+    .banner-subtitle {
+      font-size: 12px;
+      margin: 4px 0 0 0;
+      opacity: 0.9;
+      color: white;
+    }
+  }
+}
+
 // Responsive
 @media (max-width: 576px) {
   .categorias-grid {
@@ -241,5 +300,29 @@ ion-content {
 
   .fotos-container {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .banner-suscripcion {
+    padding: 10px 12px;
+  }
+
+  .banner-content {
+    gap: 8px;
+  }
+
+  .banner-text {
+    gap: 8px;
+  }
+
+  .banner-icon {
+    font-size: 20px;
+  }
+
+  .banner-title {
+    font-size: 13px;
+  }
+
+  .banner-subtitle {
+    font-size: 11px;
   }
 }

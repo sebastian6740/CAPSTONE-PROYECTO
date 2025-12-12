@@ -11,7 +11,9 @@
 
         <div class="header-title">
           <h1>Trueque App</h1>
-           <img src="assets/img/trueques.png" alt="Logo de Trueques" class="logo-img">
+          <div class="logo-header">
+            <img src="assets/img/trueques.png" class="logo-img">
+          </div>
           <p>Intercambia lo que quieras</p>
         </div>
 
@@ -42,7 +44,12 @@
 
         <!-- Barra de búsqueda -->
         <div class="search-bar">
-          <ion-searchbar placeholder="Buscar" mode="ios"></ion-searchbar>
+          <ion-searchbar
+            placeholder="Buscar artículos..."
+            mode="ios"
+            (ionInput)="buscarArticulos($event)"
+            debounce="300">
+          </ion-searchbar>
         </div>
 
         <!-- Filtros de categoría -->
@@ -85,7 +92,7 @@
     <ion-icon name="cube-outline" class="icono-vacio"></ion-icon>
     <h3>No hay artículos</h3>
     <p *ngIf="categoriaSeleccionada">No hay artículos en esta categoría</p>
-    <p *ngIf="!categoriaSeleccionada">¡Sé el primero en publicar un artículo!</p>
+    <p *ngIf="!categoriaSeleccionada && !esAdmin()">¡Sé el primero en publicar un artículo!</p>
   </div>
 
   <!-- Grid de trueques -->
@@ -122,6 +129,20 @@
     <ion-button expand="block" color="gray" (click)="irACrearTrueque()">
       Publicar artículo
     </ion-button>
+  </div>
+
+  <!-- Banner de suscripción en home (opcional) -->
+  <div *ngIf="!esSuscriptor" class="banner-home-suscripcion">
+    <ion-card color="primary">
+      <ion-card-content class="banner-card-content">
+        <ion-icon name="star"></ion-icon>
+        <h3>¡Publica ilimitadamente!</h3>
+        <p>Suscríbete a Premium o Pro y disfruta de publicaciones sin límite</p>
+        <ion-button expand="block" color="light" (click)="irASuscripcion()">
+          Ver Planes
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
   </div>
 </ion-content>
 

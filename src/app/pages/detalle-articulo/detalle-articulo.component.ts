@@ -1,4 +1,4 @@
-import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ModalController } from '@ionic/angular';
@@ -16,6 +16,7 @@ register();
   standalone: true,
   templateUrl: './detalle-articulo.component.html',
   styleUrls: ['./detalle-articulo.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   imports: [CommonModule, IonicModule, FirebaseDatePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })

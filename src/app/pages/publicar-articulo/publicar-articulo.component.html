@@ -78,16 +78,64 @@
       <p class="foto-info">Puedes agregar hasta 5 fotos ({{ articulo.fotos.length }}/5)</p>
     </div>
 
-    <!-- Botón de publicar -->
-    <ion-button
+    <!-- Indicador de estado de suscripción/publicación -->
+    <ion-card *ngIf="!esSuscriptor && ultimaPublicacion > 0" color="warning">
+      <ion-card-content>
+        <div class="info-publicacion">
+          <ion-icon name="information-circle"></ion-icon>
+          <div>
+            <p><strong>Próxima publicación gratuita en:</strong></p>
+            <p class="tiempo-espera">{{ proximaPublicacionEn }}</p>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card *ngIf="esSuscriptor" color="success">
+      <ion-card-content>
+        <div class="info-suscriptor">
+          <ion-icon name="star"></ion-icon>
+          <p>✅ Suscriptor activo - Publica ilimitadamente</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Botón de publicación -->
+    <ion-button 
+      (click)="publicarArticulo()" 
+      [disabled]="!puedePublicar"
       expand="block"
       color="primary"
-      size="large"
-      class="btn-publicar"
-      (click)="publicarArticulo()"
-    >
-      Publicar Artículo
+      size="large">
+      <ion-icon slot="start" name="cloud-upload"></ion-icon>
+      {{ puedePublicar ? 'Publicar Artículo' : `No disponible por ${proximaPublicacionEn}` }}
     </ion-button>
+
+    <!-- Información adicional -->
+    <div *ngIf="!puedePublicar && !esSuscriptor" class="info-suscripcion">
+      <ion-text color="medium">
+        <small>💡 Suscríbete para publicar ilimitadamente sin esperar 24 horas</small>
+      </ion-text>
+    </div>
+
+    <!-- Banner flotante de suscripción (solo si no es suscriptor) -->
+    <div *ngIf="!esSuscriptor && ultimaPublicacion > 0" class="banner-suscripcion">
+      <div class="banner-content">
+        <div class="banner-text">
+          <ion-icon name="star" class="banner-icon"></ion-icon>
+          <div>
+            <p class="banner-title">Suscríbete ahora</p>
+            <p class="banner-subtitle">Publica ilimitadamente sin esperar 24h</p>
+          </div>
+        </div>
+        <ion-button 
+          size="small" 
+          color="primary"
+          (click)="irASuscripcion()">
+          Ver Planes
+        </ion-button>
+      </div>
+    </div>
 
   </div>
 </ion-content>

@@ -3,13 +3,26 @@
 $primary-color: var(--ion-color-primary, #3880ff);
 $background-blue: #4169E1;
 $background-lighter-blue: #6B8FF2;
-$input-background: rgba(255, 255, 255, 0.2);
+$input-background: rgba(255, 255, 255, 0.3); // Aumentado de 0.2 a 0.3 para mejor visibilidad en Android
 $text-white: #ffffff;
 $text-gray: #e0e0e0;
 $text-light-gray: #f5f5f5;
 
+:host {
+  ion-content {
+    --background: linear-gradient(180deg, #4169E1 0%, #6B8FF2 100%);
+  }
+}
+
+ion-content::part(background) {
+  background: linear-gradient(180deg, #4169E1 0%, #6B8FF2 100%) !important;
+}
+
+ion-content.login-content {
+  background: linear-gradient(180deg, #4169E1 0%, #6B8FF2 100%) !important;
+}
+
 .login-content {
-  --background: linear-gradient(180deg, #{$background-blue} 0%, #{$background-lighter-blue} 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -95,29 +108,31 @@ ion-label {
 .login-item {
   width: 100%;
   --background: #{$input-background};
+  background: rgba(255, 255, 255, 0.25) !important; // AGREGADO: Fallback explícito
   --border-radius: 14px;
+  border-radius: 14px !important;
   --padding-start: 16px;
   --padding-end: 16px;
   --inner-padding-end: 8px;
   --min-height: clamp(50px, 12vw, 56px);
   --highlight-color-focused: #{$text-white};
-  border-radius: 14px !important;
   overflow: hidden;
   margin: 0;
   box-sizing: border-box;
 
-
   ion-input {
     --color: #{$text-white};
+    color: #ffffff !important; // AGREGADO: Fallback explícito
     --placeholder-color: #{$text-gray};
     --placeholder-opacity: 0.7;
     font-size: clamp(14px, 3.5vw, 16px);
     border-radius: 14px;
-    
+
     &::part(native) {
       padding-top: 8px;
       padding-bottom: 8px;
       border-radius: 14px;
+      background: transparent !important; // AGREGADO: Asegurar fondo transparente
     }
   }
 
@@ -127,7 +142,7 @@ ion-label {
     cursor: pointer;
     padding: 8px;
     margin-right: -4px;
-    
+
     &:active {
       opacity: 0.7;
     }

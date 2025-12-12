@@ -26,6 +26,14 @@ export interface Usuario {
   rol?: 'user' | 'admin'; // Rol del usuario (opcional para compatibilidad con usuarios existentes)
   sesion_activa?: string; // Token de sesión activa (detectar inicio dual)
   ultima_actividad?: Date; // Última actividad del usuario
+  // CAMPOS DE CONTROL DE SUBIDAS DE ARTÍCULOS
+  ultimaSubida?: Date; // Fecha de la última subida de artículo
+  subidaGratis?: boolean; // Si ya usó la subida gratis (true = ya la usó, false/undefined = aún no)
+  esSuscriptor?: boolean; // Si tiene suscripción activa para subir ilimitadamente
+  fechaSuscripcion?: Date; // Fecha en que se suscribió (para validar vigencia futura)
+  // TÉRMINOS Y CONDICIONES
+  terminosAceptados?: boolean; // Si el usuario aceptó los términos y condiciones
+  fechaAceptacionTerminos?: Date; // Fecha en que aceptó los términos
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonicModule, PopoverController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
@@ -11,6 +11,7 @@ import { FirebaseDatePipe } from '../../../core/pipes/firebase-date.pipe';
   standalone: true,
   templateUrl: './notificaciones-popover.component.html',
   styleUrls: ['./notificaciones-popover.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   imports: [IonicModule, CommonModule, FirebaseDatePipe]
 })
 export class NotificacionesPopoverComponent implements OnInit {

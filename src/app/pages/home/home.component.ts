@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonicModule, PopoverController, AlertController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
@@ -8,13 +8,16 @@ import { MensajesService } from '../../core/services/mensajes.service';
 import { AuthService } from '../../core/services/auth.service';
 import { RecompensasService } from '../../core/services/recompensas.service';
 import { NotificacionesService } from '../../core/services/notificaciones.service';
+import { SuscripcionService } from '../../core/services/suscripcion.service';
 
 @Component({
   selector: 'app-home',
   standalone: true,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   imports: [IonicModule, CommonModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class HomeComponent implements OnInit, OnDestroy {
 
@@ -52,6 +55,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Suscripción para detectar sesión dual
   private sesionDualSubscription?: Subscription;
 
+  // Suscripción
+  esSuscriptor: boolean = false;
+
+  // Búsqueda
+  terminoBusqueda: string = '';
+
   constructor(
     private router: Router,
     private articulosService: ArticulosService,
@@ -60,7 +69,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     private recompensasService: RecompensasService,
     private notificacionesService: NotificacionesService,
     private popoverController: PopoverController,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private suscripcionService: SuscripcionService
   ) {}
 
   ngOnInit() {
@@ -76,6 +86,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.cargarNotificaciones();
     this.cargarPuntos();
     this.iniciarDetectorSesionDual();
+    this.verificarSuscripcion();
+    // Refrescar cada 3 segundos
+    setInterval(() => {
+      this.verificarSuscripcion();
+    }, 3000);
   }
 
   ngOnDestroy() {
@@ -95,6 +110,9 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     this.cargarMensajesNoLeidos();
     this.cargarPuntos();
+
+    // Refrescar suscripción cada vez que entras a la página
+    this.verificarSuscripcion();
   }
 
   // Cargar contador de mensajes no leídos
@@ -128,26 +146,48 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Cargar artículos del servicio
   cargarArticulos() {
     this.articulosService.articulos$.subscribe(articulos => {
+      console.log('📦 Artículos recibidos en home:', articulos.length);
+
       // Filtrar artículos según el tipo de usuario
       if (this.authService.esAdmin()) {
         // Admins ven todos los artículos
         this.todosLosArticulos = articulos;
       } else {
         // Usuarios normales solo ven artículos aprobados
-        this.todosLosArticulos = articulos.filter(art => art.aprobado === true);
+        // Usar comparación flexible para capturar true, 1, "true", etc.
+        this.todosLosArticulos = articulos.filter(art => {
+          const valorAprobado = art.aprobado as any;
+          const estaAprobado = valorAprobado === true || valorAprobado === 1 || valorAprobado === '1' || valorAprobado === 'true';
+          if (estaAprobado) {
+            console.log(`✅ Artículo aprobado mostrado: ${art.nombre} (aprobado: ${art.aprobado}, tipo: ${typeof art.aprobado})`);
+          }
+          return estaAprobado;
+        });
+        console.log(`📊 Artículos aprobados para mostrar: ${this.todosLosArticulos.length}`);
       }
 
       this.aplicarFiltro();
     });
   }
 
-  // Aplicar filtro de categoría
+  // Aplicar filtro de categoría y búsqueda
   aplicarFiltro() {
     let articulosFiltrados = this.todosLosArticulos;
 
+    // Filtrar por categoría
     if (this.categoriaSeleccionada) {
-      articulosFiltrados = this.todosLosArticulos.filter(
+      articulosFiltrados = articulosFiltrados.filter(
         art => art.categoria === this.categoriaSeleccionada
+      );
+    }
+
+    // Filtrar por término de búsqueda
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      const termino = this.terminoBusqueda.toLowerCase().trim();
+      articulosFiltrados = articulosFiltrados.filter(art =>
+        art.nombre?.toLowerCase().includes(termino) ||
+        art.descripcion?.toLowerCase().includes(termino) ||
+        art.categoria?.toLowerCase().includes(termino)
       );
     }
 
@@ -176,6 +216,13 @@ export class HomeComponent implements OnInit, OnDestroy {
     } else {
       this.categoriaSeleccionada = categoria;
     }
+    this.aplicarFiltro();
+  }
+
+  // Buscar artículos
+  buscarArticulos(event: any) {
+    const valor = event.target.value;
+    this.terminoBusqueda = valor || '';
     this.aplicarFiltro();
   }
 
@@ -300,6 +347,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     });
 
     await alert.present();
+  }
+
+  // Verificar si es suscriptor
+  async verificarSuscripcion() {
+    this.esSuscriptor = await this.suscripcionService.esSuscriptorActivo();
+  }
+
+  // Ir a suscripción
+  irASuscripcion() {
+    this.router.navigate(['/suscripcion']);
   }
 
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ModalController, AlertController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,6 +12,7 @@ import { Comentario, EstadisticasCalificacion } from '../../core/models/comentar
   selector: 'app-perfil-publico',
   templateUrl: './perfil-publico.component.html',
   styleUrls: ['./perfil-publico.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CommonModule, IonicModule, ReactiveFormsModule]
 })

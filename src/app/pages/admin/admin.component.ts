@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonicModule, AlertController, ModalController, ToastController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
@@ -13,6 +13,7 @@ import { FirebaseDatePipe } from '../../core/pipes/firebase-date.pipe';
   standalone: true,
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   imports: [IonicModule, CommonModule, FirebaseDatePipe]
 })
 export class AdminComponent implements OnInit, OnDestroy {
@@ -23,6 +24,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   vistaActiva: 'articulos' | 'usuarios' | 'fotos' | 'pendientes' = 'pendientes';
   usuarioAdmin: Usuario | null = null;
   procesando: boolean = false;
+  articulosProcesando: Set<string> = new Set(); // IDs de artículos siendo procesados
   private articulosSubscription: any;
 
   estadisticas = {
@@ -140,6 +142,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   obtenerNombreUsuario(usuarioId: string): string {
     const usuario = this.usuarios.find(u => u.id === usuarioId);
     return usuario?.nombre || 'Usuario desconocido';
+  }
+
+  estaArticuloProcesando(articuloId: string | undefined): boolean {
+    return articuloId ? this.articulosProcesando.has(articuloId) : false;
   }
 
   async verDetalleUsuario(usuario: Usuario) {
@@ -305,11 +311,18 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   cerrarSesion() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe(() => {
+      console.log('✅ Sesión cerrada correctamente');
+      this.router.navigate(['/login'], { replaceUrl: true });
+    });
   }
 
   async aprobarArticulo(articulo: Articulo) {
+    // Prevenir procesamiento múltiple
+    if (!articulo.id || this.articulosProcesando.has(articulo.id)) {
+      return;
+    }
+
     const alert = await this.alertController.create({
       header: 'Aprobar artículo',
       message: `¿Deseas aprobar el artículo "${articulo.nombre}" de ${this.obtenerNombreUsuario(articulo.usuarioId || '')}?`,
@@ -322,13 +335,21 @@ export class AdminComponent implements OnInit, OnDestroy {
           text: 'Aprobar',
           handler: async () => {
             try {
+              // Marcar como procesando
+              this.articulosProcesando.add(articulo.id!);
               this.procesando = true;
+
               await this.articulosService.aprobarArticulo(articulo.id || '');
               this.mostrarToast('Artículo aprobado correctamente');
-              this.procesando = false;
+
+              // Nota: No necesitamos remover del Set porque Firestore
+              // actualizará la lista automáticamente y el artículo desaparecerá
             } catch (error) {
-              this.procesando = false;
+              // Si falla, remover del Set para permitir reintento
+              this.articulosProcesando.delete(articulo.id!);
               this.mostrarToast('Error al aprobar el artículo', true);
+            } finally {
+              this.procesando = false;
             }
           }
         }
@@ -338,6 +359,11 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   async rechazarArticulo(articulo: Articulo) {
+    // Prevenir procesamiento múltiple
+    if (!articulo.id || this.articulosProcesando.has(articulo.id)) {
+      return;
+    }
+
     // Primero pedir el motivo del rechazo
     const alertMotivo = await this.alertController.create({
       header: 'Rechazar artículo',
@@ -379,13 +405,21 @@ export class AdminComponent implements OnInit, OnDestroy {
                   role: 'destructive',
                   handler: async () => {
                     try {
+                      // Marcar como procesando
+                      this.articulosProcesando.add(articulo.id!);
                       this.procesando = true;
+
                       await this.articulosService.rechazarArticulo(articulo.id || '', data.motivo.trim());
                       this.mostrarToast('Artículo rechazado y usuario notificado');
-                      this.procesando = false;
+
+                      // Nota: No necesitamos remover del Set porque Firestore
+                      // actualizará la lista automáticamente y el artículo desaparecerá
                     } catch (error) {
-                      this.procesando = false;
+                      // Si falla, remover del Set para permitir reintento
+                      this.articulosProcesando.delete(articulo.id!);
                       this.mostrarToast('Error al rechazar el artículo', true);
+                    } finally {
+                      this.procesando = false;
                     }
                   }
                 }

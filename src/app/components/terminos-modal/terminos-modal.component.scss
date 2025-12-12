@@ -1,0 +1,101 @@
+.terminos-container {
+  max-width: 800px;
+  margin: 0 auto;
+
+  h2 {
+    color: var(--ion-color-primary);
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .intro-text {
+    font-size: 1rem;
+    color: var(--ion-color-medium);
+    text-align: center;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+  }
+
+  .terminos-content {
+    background: var(--ion-color-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+
+    h3 {
+      color: var(--ion-color-primary);
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+
+    p {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--ion-color-dark);
+      margin-bottom: 1rem;
+    }
+
+    ul {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+
+      li {
+        font-size: 0.95rem;
+        line-height: 1.6;
+        color: var(--ion-color-dark);
+        margin-bottom: 0.5rem;
+      }
+    }
+  }
+}
+
+.footer-buttons {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+
+  ion-button {
+    flex: 1;
+    margin: 0;
+    font-weight: 600;
+    text-transform: none;
+    --border-radius: 12px;
+  }
+
+  .btn-rechazar {
+    --background: var(--ion-color-danger);
+  }
+
+  .btn-aceptar {
+    --background: var(--ion-color-success);
+  }
+}
+
+// Estilos para el scrollbar en el contenido de términos
+.terminos-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminos-content::-webkit-scrollbar-track {
+  background: var(--ion-color-light-shade);
+  border-radius: 10px;
+}
+
+.terminos-content::-webkit-scrollbar-thumb {
+  background: var(--ion-color-medium);
+  border-radius: 10px;
+
+  &:hover {
+    background: var(--ion-color-medium-shade);
+  }
+}

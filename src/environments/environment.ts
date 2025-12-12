@@ -11,7 +11,7 @@ export const environment = {
     storageBucket: "trueque-apps-aaa4a.firebasestorage.app",
     messagingSenderId: "341216676542",
     appId: "1:341216676542:web:7a2d8aae2981efe7582cef"
-  }
+  },
 };
 
 /*

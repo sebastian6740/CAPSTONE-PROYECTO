@@ -1,15 +1,18 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { IonicModule, ToastController, Platform } from '@ionic/angular';
+import { Router, ActivatedRoute } from '@angular/router';
+import { IonicModule, ToastController, Platform, AlertController, ModalController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
+import { Auth } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
+import { TerminosModalComponent } from '../../components/terminos-modal/terminos-modal.component';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, IonicModule]
 })
@@ -23,8 +26,12 @@ export class LoginComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private toastController: ToastController,
-    private platform: Platform
+    private platform: Platform,
+    private alertController: AlertController,
+    private auth: Auth,
+    private modalController: ModalController
   ) {}
 
   ngOnInit() {
@@ -32,6 +39,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       email: ['', [Validators.required, Validators.email]],
       contrasena: ['', [Validators.required, Validators.minLength(6)]]
     });
+
 
     // Verificar si el usuario ya está autenticado
     if (this.authService.estaAutenticado()) {
@@ -74,17 +82,26 @@ export class LoginComponent implements OnInit, OnDestroy {
     console.log('🔐 Iniciando proceso de login para:', email);
 
     this.authService.login(email, contrasena).subscribe({
-      next: (resultado) => {
+      next: async (resultado) => {
         this.cargando = false;
         console.log('📬 Resultado del login:', resultado);
 
         if (resultado.exito) {
-          console.log('✅ Login exitoso, redirigiendo al home...');
-          this.mostrarMensaje('¡Bienvenido!', 'success');
-          setTimeout(() => {
-            // replaceUrl: true previene que se pueda volver atrás al login
-            this.router.navigate(['/home'], { replaceUrl: true });
-          }, 1000);
+          console.log('✅ Login exitoso');
+
+          // Verificar si el usuario aceptó los términos
+          const usuario = this.authService.getUsuarioActualSync();
+          if (usuario && !usuario.terminosAceptados) {
+            console.log('⚠️ Usuario no ha aceptado términos, mostrando modal...');
+            await this.mostrarModalTerminos(usuario.id);
+          } else {
+            console.log('✅ Usuario con términos aceptados, redirigiendo al home...');
+            this.mostrarMensaje('¡Bienvenido!', 'success');
+            setTimeout(() => {
+              // replaceUrl: true previene que se pueda volver atrás al login
+              this.router.navigate(['/home'], { replaceUrl: true });
+            }, 1000);
+          }
         } else {
           console.error('❌ Login falló:', resultado.mensaje);
           this.mostrarMensaje(resultado.mensaje, 'danger');
@@ -101,10 +118,10 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
-  private async mostrarMensaje(mensaje: string, color: string) {
+  private async mostrarMensaje(mensaje: string, color: string, duration: number = 2000) {
     const toast = await this.toastController.create({
       message: mensaje,
-      duration: 2000,
+      duration: duration,
       color: color,
       position: 'bottom'
     });
@@ -117,5 +134,38 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   irAlRegistro() {
     this.router.navigate(['/registro']);
+  }
+
+  private async mostrarModalTerminos(userId: string) {
+    const modal = await this.modalController.create({
+      component: TerminosModalComponent,
+      backdropDismiss: false, // No se puede cerrar tocando afuera
+      keyboardClose: false // No se puede cerrar con el botón de atrás
+    });
+
+    await modal.present();
+
+    const { data } = await modal.onWillDismiss();
+
+    if (data?.aceptado) {
+      console.log('✅ Usuario aceptó los términos');
+      const exito = await this.authService.aceptarTerminos(userId);
+
+      if (exito) {
+        this.mostrarMensaje('¡Bienvenido a Trueques APP!', 'success');
+        setTimeout(() => {
+          this.router.navigate(['/home'], { replaceUrl: true });
+        }, 1000);
+      } else {
+        this.mostrarMensaje('Error al guardar aceptación de términos', 'danger');
+      }
+    } else {
+      console.log('❌ Usuario rechazó los términos');
+      this.mostrarMensaje('Debes aceptar los términos para usar la aplicación', 'warning', 3000);
+      // Cerrar sesión si rechaza los términos
+      this.authService.logout().subscribe(() => {
+        console.log('🚪 Sesión cerrada por rechazo de términos');
+      });
+    }
   }
 }

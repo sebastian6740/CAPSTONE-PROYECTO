@@ -14,9 +14,9 @@
   <div class="perfil-card" *ngIf="usuario">
     <!-- Foto de perfil -->
     <div class="foto-container"
-         [class.editable]="editandoPerfil"
-         [class.pendiente]="hayFotoPendiente()"
-         (click)="editandoPerfil && cambiarFoto()">
+        [class.editable]="editandoPerfil"
+        [class.pendiente]="hayFotoPendiente()"
+        (click)="editandoPerfil && cambiarFoto()">
       <img
         [src]="obtenerFotoUsuario()"
         alt="Foto de perfil"
@@ -121,35 +121,66 @@
     <form [formGroup]="formularioEdicion">
       <ion-item>
         <ion-label position="floating">Nombre completo</ion-label>
-        <ion-input 
-          type="text" 
+        <ion-input
+          type="text"
           formControlName="nombre">
         </ion-input>
       </ion-item>
+      <ion-note color="danger" *ngIf="formularioEdicion.get('nombre')?.invalid && formularioEdicion.get('nombre')?.touched">
+        {{ formularioEdicion.get('nombre')?.hasError('required') ? 'El nombre es requerido' : 'Mínimo 3 caracteres' }}
+      </ion-note>
 
       <ion-item>
         <ion-label position="floating">Teléfono</ion-label>
-        <ion-input 
-          type="tel" 
-          formControlName="telefono">
+        <ion-input
+          type="tel"
+          formControlName="telefono"
+          placeholder="Ej: +569 12345678">
         </ion-input>
       </ion-item>
+      <ion-note color="danger" *ngIf="formularioEdicion.get('telefono')?.invalid && formularioEdicion.get('telefono')?.touched">
+        {{ formularioEdicion.get('telefono')?.hasError('required') ? 'El teléfono es requerido' : 'Formato: +569 seguido de 8 dígitos' }}
+      </ion-note>
 
       <ion-item>
         <ion-label position="floating">Ciudad</ion-label>
-        <ion-input 
-          type="text" 
-          formControlName="ciudad">
-        </ion-input>
+        <ion-select
+          formControlName="ciudad"
+          placeholder="Selecciona tu ciudad"
+          interface="action-sheet"
+          cancelText="Cancelar">
+          <ion-select-option value="Santiago">Santiago</ion-select-option>
+          <ion-select-option value="Valparaíso">Valparaíso</ion-select-option>
+          <ion-select-option value="Viña del Mar">Viña del Mar</ion-select-option>
+          <ion-select-option value="Concepción">Concepción</ion-select-option>
+          <ion-select-option value="La Serena">La Serena</ion-select-option>
+          <ion-select-option value="Antofagasta">Antofagasta</ion-select-option>
+          <ion-select-option value="Temuco">Temuco</ion-select-option>
+          <ion-select-option value="Rancagua">Rancagua</ion-select-option>
+          <ion-select-option value="Talca">Talca</ion-select-option>
+          <ion-select-option value="Arica">Arica</ion-select-option>
+          <ion-select-option value="Chillán">Chillán</ion-select-option>
+          <ion-select-option value="Iquique">Iquique</ion-select-option>
+          <ion-select-option value="Los Ángeles">Los Ángeles</ion-select-option>
+          <ion-select-option value="Puerto Montt">Puerto Montt</ion-select-option>
+          <ion-select-option value="Coyhaique">Coyhaique</ion-select-option>
+          <ion-select-option value="Punta Arenas">Punta Arenas</ion-select-option>
+        </ion-select>
       </ion-item>
+      <ion-note color="danger" *ngIf="formularioEdicion.get('ciudad')?.invalid && formularioEdicion.get('ciudad')?.touched">
+        La ciudad es requerida
+      </ion-note>
 
       <ion-item>
         <ion-label position="floating">Biografía</ion-label>
-        <ion-textarea 
+        <ion-textarea
           formControlName="biografia"
-          placeholder="Cuéntanos sobre ti (máx 200 caracteres)">
+          placeholder="Cuéntanos sobre ti (mín 30, máx 200 caracteres)">
         </ion-textarea>
       </ion-item>
+      <ion-note color="danger" *ngIf="formularioEdicion.get('biografia')?.invalid && formularioEdicion.get('biografia')?.touched">
+        {{ formularioEdicion.get('biografia')?.hasError('minlength') ? 'Mínimo 30 caracteres' : 'Máximo 200 caracteres' }}
+      </ion-note>
 
       <ion-button 
         expand="block" 
@@ -231,7 +262,7 @@
           <span class="recompensa-icono">🏅</span>
           <div>
             <div class="recompensa-titulo">Nivel de usuario</div>
-            <div class="recompensa-descripcion">{{ (usuario?.calificacion || 0) >= 4.5 ? 'Premium' : (usuario?.calificacion || 0) >= 3 ? 'Estándar' : 'Básico' }}</div>
+            <div class="recompensa-descripcion">{{ esSuscriptor ? 'Premium' : 'Básico' }}</div>
           </div>
         </div>
       </div>
@@ -264,7 +295,7 @@
  
       <button
         class="menu-button"
-        routerLink="/terminos">
+        (click)="verTerminosYCondiciones()">
         <ion-icon name="document-text"></ion-icon>
         <span>Términos y condiciones</span>
         <ion-icon name="chevron-forward" slot="end"></ion-icon>
@@ -288,4 +319,26 @@
       </button>
     </ion-card-content>
   </ion-card>
+
+  <!-- Sección de suscripción -->
+  <div *ngIf="esSuscriptor" class="seccion-suscripcion">
+    <ion-card color="success">
+      <ion-card-header>
+        <ion-card-title>✅ Suscripción Activa</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p><strong>Plan:</strong> {{ infoSuscripcion.plan }}</p>
+        <p><strong>Días restantes:</strong> {{ infoSuscripcion.diasRestantes }}</p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Botón cancelar en rojo -->
+    <ion-button 
+      expand="block" 
+      color="danger"
+      (click)="cancelarSuscripcion()"
+      class="boton-cancelar">
+      Cancelar Suscripción
+    </ion-button>
+  </div>
 </ion-content>

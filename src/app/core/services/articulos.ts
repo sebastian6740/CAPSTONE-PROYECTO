@@ -389,4 +389,90 @@ export class ArticulosService {
   getArticulosAprobados(): Articulo[] {
     return this.articulosSubject.value.filter(art => art.aprobado === true);
   }
+
+  // ============================================
+  // MÉTODOS PARA CONTROL DE SUBIDA DE ARTÍCULOS
+  // ============================================
+  
+  /**
+   * Valida si el usuario puede subir un artículo según las reglas:
+   * - Primera subida: Gratis
+   * - Subidas posteriores: Esperar 24h o tener suscripción
+   */
+  async puedeSubirArticulo(usuarioId: string): Promise<{
+    puede: boolean;
+    razon: string;
+    horasRestantes?: number;
+  }> {
+    try {
+      console.log(`🔍 Validando permisos de subida para usuario ${usuarioId}...`);
+      
+      const usuarioDocRef = doc(this.firestore, 'usuarios', usuarioId);
+      const usuarioDoc = await getDoc(usuarioDocRef);
+      
+      if (!usuarioDoc.exists()) {
+        return { puede: false, razon: 'Usuario no encontrado' };
+      }
+      
+      const usuario = usuarioDoc.data() as any;
+      
+      // Si es suscriptor activo, permitir siempre
+      if (usuario.esSuscriptor === true) {
+        console.log('✅ Usuario es suscriptor, puede subir ilimitadamente');
+        return { puede: true, razon: 'Eres suscriptor premium' };
+      }
+      
+      // Si aún no ha usado la subida gratis, permitir
+      if (usuario.subidaGratis !== true) {
+        console.log('✅ Primera subida gratis disponible');
+        return { puede: true, razon: 'Primera subida gratis' };
+      }
+      
+      // Si ya usó la gratis y no es suscriptor, validar 24h
+      if (usuario.ultimaSubida) {
+        const ultimaSubidaDate = usuario.ultimaSubida.toDate?.() || new Date(usuario.ultimaSubida);
+        const ahora = new Date();
+        const diferenciaMs = ahora.getTime() - ultimaSubidaDate.getTime();
+        const diferenciaHoras = diferenciaMs / (1000 * 60 * 60);
+        
+        if (diferenciaHoras >= 24) {
+          console.log('✅ Han pasado 24h, puede subir');
+          return { puede: true, razon: 'Nuevo artículo disponible' };
+        }
+        
+        const horasRestantes = Math.ceil(24 - diferenciaHoras);
+        console.log(`❌ Debe esperar ${horasRestantes}h más`);
+        return {
+          puede: false,
+          razon: `Debes esperar ${horasRestantes} horas más para subir otro artículo`,
+          horasRestantes
+        };
+      }
+      
+      return { puede: true, razon: 'Primera subida disponible' };
+    } catch (error) {
+      console.error('❌ Error al validar permisos de subida:', error);
+      return { puede: false, razon: 'Error al verificar permisos' };
+    }
+  }
+  
+  /**
+   * Registra la subida de un artículo actualizando el timestamp y marcando la subida gratis como usada
+   */
+  async registrarSubida(usuarioId: string): Promise<void> {
+    try {
+      console.log(`📝 Registrando subida de artículo para usuario ${usuarioId}...`);
+      
+      const usuarioDocRef = doc(this.firestore, 'usuarios', usuarioId);
+      await updateDoc(usuarioDocRef, {
+        ultimaSubida: serverTimestamp(),
+        subidaGratis: true // Marcar la subida gratis como usada
+      });
+      
+      console.log('✅ Subida registrada correctamente');
+    } catch (error) {
+      console.error('❌ Error al registrar subida:', error);
+      throw error;
+    }
+  }
 }

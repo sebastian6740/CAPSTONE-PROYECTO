@@ -218,6 +218,54 @@ export class NotificacionesService {
     console.log(`✅ ${snapshot.docs.length} notificaciones eliminadas`);
   }
 
+  // Crear notificación de foto aprobada
+  async notificarFotoAprobada(usuarioId: string) {
+    console.log(`🔔 Creando notificación de foto aprobada para usuario ${usuarioId}...`);
+
+    const notificacionesCollection = collection(this.firestore, 'notificaciones');
+    const docRef = await addDoc(notificacionesCollection, {
+      usuarioId,
+      tipo: 'foto_aprobada',
+      titulo: 'Foto aprobada',
+      mensaje: '¡Tu foto de perfil ha sido aprobada! Ya está visible para todos los usuarios.',
+      leida: false,
+      fecha: serverTimestamp(),
+      accion: {
+        tipo: 'navegar',
+        ruta: '/perfil'
+      }
+    });
+
+    console.log(`✅ Notificación de foto aprobada creada con ID: ${docRef.id}`);
+  }
+
+  // Crear notificación de foto rechazada
+  async notificarFotoRechazada(usuarioId: string, motivo: string) {
+    console.log(`🔔 Creando notificación de foto rechazada para usuario ${usuarioId}...`);
+    console.log(`📋 Motivo:`, motivo);
+
+    const notificacionesCollection = collection(this.firestore, 'notificaciones');
+    const docRef = await addDoc(notificacionesCollection, {
+      usuarioId,
+      tipo: 'foto_rechazada',
+      titulo: 'Foto rechazada',
+      mensaje: motivo
+        ? `Tu foto de perfil fue rechazada. Motivo: ${motivo}`
+        : 'Tu foto de perfil fue rechazada por el administrador. Por favor, sube una nueva foto.',
+      leida: false,
+      fecha: serverTimestamp(),
+      fotoRelacionada: {
+        motivo: motivo
+      },
+      accion: {
+        tipo: 'navegar',
+        ruta: '/perfil'
+      }
+    });
+
+    console.log(`✅ Notificación de foto rechazada creada con ID: ${docRef.id}`);
+  }
+
   // Cleanup al destruir el servicio
   ngOnDestroy() {
     console.log('🔕 Limpiando servicio de notificaciones...');

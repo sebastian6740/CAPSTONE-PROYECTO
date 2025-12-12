@@ -1,0 +1,53 @@
+.planes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.plan-destacado {
+  border: 2px solid var(--ion-color-primary);
+  transform: scale(1.02);
+}
+
+.precio {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--ion-color-primary);
+  margin: 10px 0 5px 0;
+}
+
+.duracion {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  margin: 0;
+}
+
+.beneficios {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0;
+
+  li {
+    padding: 8px 0;
+    color: var(--ion-color-dark);
+    font-size: 14px;
+  }
+}
+
+.tarjeta-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+@media (max-width: 576px) {
+  .tarjeta-info {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-destacado {
+    transform: scale(1);
+  }
+}

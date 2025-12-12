@@ -679,3 +679,18 @@ ion-content {
     height: 100px;
   }
 }
+
+.seccion-suscripcion {
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.boton-cancelar {
+  margin-top: 16px;
+  font-weight: 600;
+  --background: #d32f2f;
+}
+
+.boton-cancelar:hover {
+  --background: #b71c1c;
+}

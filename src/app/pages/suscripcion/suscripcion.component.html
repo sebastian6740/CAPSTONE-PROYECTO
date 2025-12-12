@@ -1,0 +1,126 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Suscripciones</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Estado actual de suscripción -->
+  <ion-card *ngIf="infoSuscripcion.esSuscriptor" color="success">
+    <ion-card-header>
+      <ion-card-title>✅ Suscriptor Activo</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p><strong>Plan:</strong> {{ infoSuscripcion.plan }}</p>
+      <p><strong>Días restantes:</strong> {{ infoSuscripcion.diasRestantes }}</p>
+      <p *ngIf="infoSuscripcion.fechaVencimiento">
+        <strong>Vencimiento:</strong> {{ infoSuscripcion.fechaVencimiento | date: 'short' }}
+      </p>
+      <ion-button expand="block" color="danger" (click)="cancelarSuscripcion()">
+        Cancelar SuscripciónS
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Planes disponibles -->
+  <ion-text *ngIf="!mostrarFormularioPago">
+    <h2>Elige tu Plan</h2>
+  </ion-text>
+
+  <div *ngIf="!mostrarFormularioPago" class="planes-container">
+    <ion-card *ngFor="let plan of planes" [ngClass]="{'plan-destacado': plan.id === 'pro'}">
+      <ion-card-header>
+        <ion-card-title>{{ plan.nombre }}</ion-card-title>
+        <p class="precio">{{ plan.simbolo }}{{ plan.precio | number: '1.0-0' }} CLP</p>
+        <p class="duracion">{{ plan.duracion }}</p>
+      </ion-card-header>
+      <ion-card-content>
+        <ul class="beneficios">
+          <li *ngFor="let beneficio of plan.beneficios">
+            ✓ {{ beneficio }}
+          </li>
+        </ul>
+        <ion-button 
+          expand="block" 
+          color="primary"
+          (click)="seleccionarPlan(plan.id)">
+          Seleccionar
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Formulario de pago -->
+  <div *ngIf="mostrarFormularioPago">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Detalles de Pago (MODO TEST)</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-text color="warning">
+          <p><strong>⚠️ Modo de Prueba:</strong> No se cobrarán fondos reales</p>
+        </ion-text>
+
+        <ion-item>
+          <ion-label position="floating">Número de Tarjeta</ion-label>
+          <ion-input 
+            [(ngModel)]="datosTargeta.numero" 
+            placeholder="4242424242424242"
+            readonly>
+          </ion-input>
+        </ion-item>
+
+        <div class="tarjeta-info">
+          <ion-item>
+            <ion-label position="floating">Mes</ion-label>
+            <ion-input 
+              [(ngModel)]="datosTargeta.mes" 
+              placeholder="MM"
+              readonly>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">Año</ion-label>
+            <ion-input 
+              [(ngModel)]="datosTargeta.anio" 
+              placeholder="YYYY"
+              readonly>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">CVC</ion-label>
+            <ion-input 
+              [(ngModel)]="datosTargeta.cvc" 
+              placeholder="123"
+              readonly>
+            </ion-input>
+          </ion-item>
+        </div>
+
+        <ion-text color="medium">
+          <p><small>💡 Tarjeta de prueba: 4242 4242 4242 4242</small></p>
+        </ion-text>
+
+        <ion-button 
+          expand="block" 
+          color="success"
+          (click)="procesarPago()">
+          Confirmar Pago
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          color="medium"
+          (click)="volver()">
+          Volver
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+</ion-content>
